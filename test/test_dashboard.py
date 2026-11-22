@@ -1,68 +1,129 @@
-from datetime import date
+import json
 
-from custom_components.ha_banking.dashboard import build_dashboard, twelve_month_days
+from custom_components.ha_banking.dashboard import (
+    DETAILS,
+    HEAD,
+    TEMPLATES,
+    build_dashboard,
+)
+
+KEYS = (
+    "booked_balance",
+    "available_balance",
+    "transaction_status",
+    "year_incoming",
+    "year_outgoing",
+    "year_net",
+    "month_incoming",
+    "month_outgoing",
+    "month_net",
+    "recent_payments",
+)
 
 
-def test_dashboard_lists_balance_graph_and_payments_for_each_account() -> None:
-    config = build_dashboard(
-        [
-            {
-                "name": "Savings",
-                "sensors": {
-                    "available_balance": "sensor.savings_available_balance",
-                    "month_incoming": "sensor.savings_month_incoming",
-                    "month_outgoing": "sensor.savings_month_outgoing",
-                    "month_net": "sensor.savings_month_net",
-                    "recent_payments": "sensor.savings_recent_payments",
-                },
-            }
-        ],
-        "sk",
-        date(2026, 11, 22),
-    )
-    cards = config["views"][0]["sections"][0]["cards"]
-    assert config["views"][0]["title"] == "Banky"
-    assert config["views"][0]["theme"] == "HA Banking"
-    assert cards[0] == {"type": "heading", "heading": "Savings"}
-    assert cards[1]["type"] == "markdown"
-    assert "sensor.savings_recent_payments" in cards[1]["content"]
-    assert cards[2]["type"] == "statistics-graph"
-    assert cards[2]["chart_type"] == "line"
-    assert cards[2]["period"] == "day"
-    assert cards[2]["days_to_show"] == 366
-    assert cards[2]["title"] == "Dostupný zostatok v čase"
-    assert cards[2]["entities"][0]["entity"] == "sensor.savings_available_balance"
-    assert cards[3]["type"] == "statistics-graph"
-    assert cards[3]["title"] == "Dostupný zostatok"
-    assert cards[3]["entities"][0]["entity"] == "sensor.savings_available_balance"
-    assert cards[4]["chart_type"] == "bar"
-    assert cards[4]["period"] == "month"
-    assert cards[4]["title"] == "Posledných 12 mesiacov"
-    assert cards[4]["days_to_show"] == twelve_month_days(date(2026, 11, 22))
-    assert [item["entity"] for item in cards[4]["entities"]] == [
-        "sensor.savings_month_incoming",
-        "sensor.savings_month_outgoing",
-        "sensor.savings_month_net",
+def _account(name: str, keys=KEYS) -> dict:
+    slug = name.lower().replace(" ", "_")
+    return {"name": name, "sensors": {key: f"sensor.{slug}_{key}" for key in keys}}
+
+
+def _types(card: dict) -> list[str]:
+    return [card["type"], *(t for child in card.get("cards", []) for t in _types(child))]
+
+
+def test_each_account_is_its_own_sections_view() -> None:
+    config = build_dashboard([_account("Savings"), _account("mBank 1")], "cs")
+    assert config["button_card_templates"] == TEMPLATES
+    assert [view["title"] for view in config["views"]] == ["Přehled", "Savings", "mBank 1"]
+    assert [view["path"] for view in config["views"]] == ["overview", "savings", "mbank-1"]
+    view = config["views"][1]
+    assert view["type"] == "sections"
+    assert "theme" not in view
+    headings = [section["cards"][0]["heading"] for section in view["sections"]]
+    assert headings == [
+        "Zůstatek",
+        "Tento měsíc",
+        "Tento rok",
+        "Poslední platby",
+        "Dostupný zůstatek v čase",
+        "Příjmy a výdaje po měsících",
     ]
-    assert "Príchod" in cards[1]["content"]
     assert "strategy" not in config
 
 
-def test_twelve_month_window_includes_the_current_month() -> None:
-    assert twelve_month_days(date(2026, 11, 22)) == (date(2026, 11, 22) - date(2025, 12, 1)).days
-    assert twelve_month_days(date(2026, 1, 15)) == (date(2026, 1, 15) - date(2025, 2, 1)).days
-
-
-def test_three_accounts_share_one_row() -> None:
-    accounts = [{"name": name, "sensors": {}} for name in ("Main", "Savings", "Other")]
-    config = build_dashboard(accounts, "en", date(2026, 11, 22))
-    view = config["views"][0]
-    assert view["max_columns"] == 3
-    assert [section["cards"][0]["heading"] for section in view["sections"]] == [
-        "Main",
-        "Savings",
-        "Other",
+def test_sections_use_the_stacked_button_card_layout() -> None:
+    view = build_dashboard([_account("Savings")], "en")["views"][1]
+    balance = view["sections"][0]["cards"][1]
+    assert _types(balance) == [
+        "custom:stack-in-card",
+        "custom:button-card",
+        "custom:mini-graph-card",
+        "custom:button-card",
     ]
+    head, graph, details = balance["cards"]
+    assert head["template"] == HEAD
+    assert head["entity"] == "sensor.savings_available_balance"
+    assert details["template"] == DETAILS
+    assert graph["entities"][0]["entity"] == "sensor.savings_available_balance"
+    payments = view["sections"][3]
+    assert payments["column_span"] == 2
+    assert "sensor.savings_recent_payments" in json.dumps(payments)
+
+
+def test_history_charts_are_drawn_from_the_months_attribute() -> None:
+    view = build_dashboard([_account("Savings")], "sk")["views"][1]
+    balance, months = view["sections"][4], view["sections"][5]
+    assert balance["cards"][0]["heading"] == "Dostupný zostatok v čase"
+    assert months["cards"][0]["heading"] == "Príjmy a výdavky po mesiacoch"
+    assert months["column_span"] == 3
+    for section in (balance, months):
+        text = json.dumps(section)
+        assert "statistics-graph" not in text
+        rows = section["cards"][1]["cards"][1]["custom_fields"]["rows"]
+        assert """at("sensor.savings_recent_payments",'months')""" in rows
+        assert _types(section["cards"][1]) == ["custom:stack-in-card", "custom:button-card", "custom:button-card"]
+
+
+def test_missing_sensors_drop_their_sections() -> None:
+    view = build_dashboard([_account("Cash", ("available_balance",))], "en")["views"][1]
+    assert [s["cards"][0]["heading"] for s in view["sections"]] == ["Balance"]
+
+
+def test_same_account_names_get_unique_paths() -> None:
+    config = build_dashboard([_account("Main"), _account("Main")], "en")
+    assert [view["path"] for view in config["views"]] == ["overview", "main", "main-2"]
+
+
+def test_an_account_named_overview_does_not_take_the_overview_path() -> None:
+    config = build_dashboard([_account("Overview")], "en")
+    assert [view["path"] for view in config["views"]] == ["overview", "overview-2"]
+
+
+def test_overview_lists_every_account_and_sums_them() -> None:
+    config = build_dashboard([_account("Savings"), _account("mBank 1")], "cs")
+    overview = config["views"][0]
+    assert overview["title"] == "Přehled"
+    assert [s["cards"][0]["heading"] for s in overview["sections"]] == [
+        "Všechny účty",
+        "Tento měsíc",
+        "Tento rok",
+        "Poslední platby",
+        "Dostupný zůstatek v čase",
+        "Příjmy a výdaje po měsících",
+    ]
+    text = json.dumps(overview, ensure_ascii=False)
+    for entity in ("sensor.savings_available_balance", "sensor.mbank_1_recent_payments", "sensor.mbank_1_year_net"):
+        assert entity in text
+    assert "mchart(MS,CUR)" in text
+    assert "bchart(MS,CUR)" in text
+    assert overview["sections"][3]["column_span"] == 2
+    assert overview["sections"][5]["column_span"] == 3
+
+
+def test_counterparty_text_is_escaped() -> None:
+    view = build_dashboard([_account("Savings")], "en")["views"][1]
+    text = json.dumps(view["sections"][3])
+    assert "esc(p.counterparty)" in text
+    assert "${p.counterparty}" not in text
 
 
 def test_dashboard_without_accounts_is_an_empty_view() -> None:

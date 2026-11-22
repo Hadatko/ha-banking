@@ -123,7 +123,8 @@
         "menu_options": {
           "bank_api": "API banky",
           "email": "E-mailová avíza",
-          "enable_banking": "Enable Banking"
+          "enable_banking": "Enable Banking",
+          "direct": "Certifikát Air Bank"
         },
         "title": "Připojit banku"
       },
@@ -158,6 +159,16 @@
       "csas_reauth_confirm": {
         "description": "Přihlas se znovu do George. Návratová adresa aplikace musí být {redirect_uri}.",
         "title": "Znovu připojit Českou spořitelnu"
+      },
+      "dashboard": {
+        "title": "Vzhled dashboardu",
+        "description": "Integrace vytvoří dashboard HA Banking. Každá další banka použije stejný vzhled, změníte ho v nastavení integrace.",
+        "data": {
+          "dashboard_style": "Vzhled dashboardu"
+        },
+        "data_description": {
+          "dashboard_style": "Modern: záložka pro každý účet a přehled, z karet button-card, stack-in-card a mini-graph-card (nainstalují se samy). Classic: původní jedna stránka s vestavěnými kartami a obrázkem na pozadí."
+        }
       }
     }
   },
@@ -206,11 +217,15 @@
       "init": {
         "data": {
           "large_payment": "Minimální částka platby",
-          "low_balance": "Nízký dostupný zůstatek"
+          "low_balance": "Nízký dostupný zůstatek",
+          "install_cards": "Instalovat karty dashboardu",
+          "dashboard_style": "Vzhled dashboardu"
         },
         "data_description": {
           "large_payment": "Platbu oznámit jen tehdy, když je její částka alespoň toto číslo. Prázdné pole oznámí každou novou platbu.",
-          "low_balance": "Oznámit jednou, když dostupný zůstatek klesne pod toto číslo. Znovu se oznámí, až když zůstatek stoupne nad něj. Prázdné pole toto vypne."
+          "low_balance": "Oznámit jednou, když dostupný zůstatek klesne pod toto číslo. Znovu se oznámí, až když zůstatek stoupne nad něj. Prázdné pole toto vypne.",
+          "install_cards": "Chybějící karty button-card, stack-in-card a mini-graph-card pro dashboard HA Banking se nainstalují z Marketu Home Assistantu nebo z HACS, jinak z jejich vydání na GitHubu.",
+          "dashboard_style": "Modern: záložka pro každý účet a přehled, z karet button-card, stack-in-card a mini-graph-card (nainstalují se samy). Classic: původní jedna stránka s vestavěnými kartami a obrázkem na pozadí."
         },
         "description": "Tato upozornění jsou volitelná. Událost o platbě se odešle při každé nové platbě.",
         "title": "Upozornění"
@@ -222,6 +237,28 @@
       "options": {
         "business": "Firemní",
         "personal": "Osobní"
+      }
+    },
+    "dashboard_style": {
+      "options": {
+        "classic": "Classic",
+        "modern": "Modern"
+      }
+    }
+  },
+  "issues": {
+    "dashboard_missing_cards": {
+      "title": "Dashboard HA Banking potřebuje karty",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Nainstalovat karty",
+            "description": "Dashboardu HA Banking chybí tyto karty: {cards}. Home Assistant je nainstaluje z Marketu nebo z HACS, jinak z GitHubu. Potom obnovte stránku prohlížeče."
+          }
+        },
+        "abort": {
+          "install_failed": "Instalace selhala: {error}"
+        }
       }
     }
   }

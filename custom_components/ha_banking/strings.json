@@ -123,7 +123,8 @@
         "menu_options": {
           "bank_api": "Bank API",
           "email": "Email notices",
-          "enable_banking": "Enable Banking"
+          "enable_banking": "Enable Banking",
+          "direct": "Air Bank certificate"
         },
         "title": "Connect a bank"
       },
@@ -158,6 +159,16 @@
       "csas_reauth_confirm": {
         "description": "Sign in again at George. The application redirect URI must be {redirect_uri}.",
         "title": "Reconnect Česká spořitelna"
+      },
+      "dashboard": {
+        "title": "Dashboard look",
+        "description": "The integration creates the HA Banking dashboard. Every bank you add later uses the same look; you can change it in the integration options.",
+        "data": {
+          "dashboard_style": "Dashboard look"
+        },
+        "data_description": {
+          "dashboard_style": "Modern: one tab per account and an overview, built from button-card, stack-in-card and mini-graph-card (installed for you). Classic: the original single page with built-in cards and a background picture."
+        }
       }
     }
   },
@@ -206,11 +217,15 @@
       "init": {
         "data": {
           "large_payment": "Minimum payment amount",
-          "low_balance": "Low available balance"
+          "low_balance": "Low available balance",
+          "install_cards": "Install dashboard cards",
+          "dashboard_style": "Dashboard look"
         },
         "data_description": {
           "large_payment": "Announce a payment only when its amount is at least this number. Leave it empty to announce every new payment.",
-          "low_balance": "Announce once when the available balance falls below this number. It can announce again after the balance rises above it. Leave it empty to turn this off."
+          "low_balance": "Announce once when the available balance falls below this number. It can announce again after the balance rises above it. Leave it empty to turn this off.",
+          "install_cards": "Install button-card, stack-in-card and mini-graph-card for the HA Banking dashboard when they are missing. They come from the Home Assistant Marketplace or HACS, otherwise from their GitHub release.",
+          "dashboard_style": "Modern: one tab per account and an overview, built from button-card, stack-in-card and mini-graph-card (installed for you). Classic: the original single page with built-in cards and a background picture."
         },
         "description": "These alerts are optional. The payment event is still fired for every new payment.",
         "title": "Alerts"
@@ -222,6 +237,28 @@
       "options": {
         "business": "Business",
         "personal": "Personal"
+      }
+    },
+    "dashboard_style": {
+      "options": {
+        "classic": "Classic",
+        "modern": "Modern"
+      }
+    }
+  },
+  "issues": {
+    "dashboard_missing_cards": {
+      "title": "The HA Banking dashboard needs cards",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Install cards",
+            "description": "The HA Banking dashboard is missing these cards: {cards}. Home Assistant installs them from the Marketplace or HACS, otherwise from GitHub. Reload the browser page afterwards."
+          }
+        },
+        "abort": {
+          "install_failed": "Installation failed: {error}"
+        }
       }
     }
   }
