@@ -9,7 +9,8 @@
       "oauth_timeout": "Čas na dokončení přihlášení do Air Bank vypršel.",
       "oauth_unauthorized": "Air Bank tuto aplikaci neschválila.",
       "reauth_successful": "Přihlášení do Air Bank bylo obnoveno.",
-      "user_rejected_authorize": "Přihlášení do Air Bank bylo zrušeno."
+      "user_rejected_authorize": "Přihlášení do Air Bank bylo zrušeno.",
+      "fio_account_mismatch": "Tento token patří jinému účtu Fio."
     },
     "error": {
       "bank_unavailable": "Enable Banking pro tuto zemi nevrátil žádnou banku.",
@@ -18,7 +19,10 @@
       "imap_failed": "Home Assistant tuto schránku neotevřel.",
       "invalid_auth": "Schránka toto jméno nebo heslo odmítla. {reason}",
       "invalid_cert": "Soubor certifikátu nebo soukromého klíče nebyl nalezen.",
-      "invalid_key": "Soubor soukromého klíče Enable Banking nebyl nalezen nebo jím nelze podepisovat požadavky."
+      "invalid_key": "Soubor soukromého klíče Enable Banking nebyl nalezen nebo jím nelze podepisovat požadavky.",
+      "fio_rejected": "Fio tento token odmítla. Zkontroluj, jestli je aktivní a jestli od autorizace uplynulo pět minut.",
+      "fio_busy": "Fio dovolí jeden dotaz na tento token jednou za 30 sekund. Počkej a zkus to znovu.",
+      "fio_unavailable": "Home Assistant nedokázal přečíst tento účet Fio."
     },
     "step": {
       "direct": {
@@ -119,7 +123,7 @@
         "title": "Znovu připojit Air Bank"
       },
       "user": {
-        "description": "Vyber e-mailová avíza, Enable Banking nebo API banky. Pod API banky používá Air Bank licencovaný certifikát a Česká spořitelna aplikaci z portálu Erste. Z Home Assistanta se platby neodesílají.",
+        "description": "Vyber e-mailová avíza, Enable Banking nebo API banky. Pod API banky používá Air Bank licencovaný certifikát, Česká spořitelna aplikaci z portálu Erste a Fio token jen ke sledování z internetového bankovnictví. Z Home Assistanta se platby neodesílají.",
         "menu_options": {
           "bank_api": "API banky",
           "email": "E-mailová avíza",
@@ -128,10 +132,11 @@
         "title": "Připojit banku"
       },
       "bank_api": {
-        "description": "Vyber banku. Každá banka používá vlastní aplikaci, uloženou jen na tomto Home Assistantovi. Z Home Assistanta se platby neodesílají.",
+        "description": "Vyber banku. Každá banka používá vlastní aplikaci nebo token, uložené jen na tomto Home Assistantovi. Z Home Assistanta se platby neodesílají.",
         "menu_options": {
           "csas": "Česká spořitelna",
-          "direct": "Certifikát Air Bank"
+          "direct": "Certifikát Air Bank",
+          "fio": "Fio banka"
         },
         "title": "API banky"
       },
@@ -158,6 +163,16 @@
       "csas_reauth_confirm": {
         "description": "Přihlas se znovu do George. Návratová adresa aplikace musí být {redirect_uri}.",
         "title": "Znovu připojit Českou spořitelnu"
+      },
+      "fio": {
+        "data": {
+          "fio_token": "API token"
+        },
+        "data_description": {
+          "fio_token": "Token jen ke sledování z Fio internetového bankovnictví. Zůstává na tomto Home Assistantovi."
+        },
+        "description": "Ve Fio internetovém bankovnictví otevři Nastavení a potom API. Vytvoř token jen ke sledování účtu, ne k zadávání plateb. Token patří jednomu účtu a začne fungovat pět minut po autorizaci. Home Assistant čte pohyby a konečný zůstatek nejvýše za posledních 90 dní. Platby neodesílá.",
+        "title": "Fio banka"
       }
     }
   },

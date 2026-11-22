@@ -8,6 +8,7 @@ CONF_CLIENT_ID = "client_id"
 CONF_CLIENT_SECRET = "client_secret"
 CONF_WEB_API_KEY = "web_api_key"
 CONF_REFRESH_TOKEN = "refresh_token"
+CONF_FIO_TOKEN = "fio_token"
 CONF_CERT = "client_cert"
 CONF_KEY = "client_key"
 CONF_SANDBOX = "sandbox"
@@ -29,6 +30,7 @@ class AuthMethod(StrEnum):
     EMAIL = "email"
     BANK_API = "bank_api"
     CSAS = "csas"
+    FIO = "fio"
 
 
 class Direction(StrEnum):

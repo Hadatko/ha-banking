@@ -29,6 +29,7 @@ from .const import (
     CONF_MARK_SEEN,
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
+    CONF_FIO_TOKEN,
     CONF_KEY,
     CONF_REFRESH_TOKEN,
     CONF_SANDBOX,
@@ -38,6 +39,7 @@ from .const import (
     SCAN_INTERVAL,
 )
 from .csas import CeskaSporitelna, CeskaSporitelnaError, collect_csas_snapshots
+from .fio import Fio, FioError, collect_fio_snapshots
 from .lib.client import AirBank
 from .lib.enable_banking import (
     EnableBanking,
@@ -78,6 +80,8 @@ class AirBankCoordinator(DataUpdateCoordinator[list[AccountSnapshot]]):
             return await self._async_update_email()
         if method == AuthMethod.CSAS:
             return await self._async_update_csas()
+        if method == AuthMethod.FIO:
+            return await self._async_update_fio()
         if self.session is None:
             raise ConfigEntryAuthFailed("Air Bank login is missing")
         try:
@@ -169,6 +173,17 @@ class AirBankCoordinator(DataUpdateCoordinator[list[AccountSnapshot]]):
             if err.status in (401, 403):
                 raise ConfigEntryAuthFailed("Česká spořitelna rejected the access token") from err
             raise UpdateFailed("Česká spořitelna account request failed") from err
+
+    async def _async_update_fio(self) -> list[AccountSnapshot]:
+        token = self.entry.data[CONF_FIO_TOKEN]
+        try:
+            return await self.hass.async_add_executor_job(
+                collect_fio_snapshots, Fio(), token, dt_util.now().date()
+            )
+        except FioError as err:
+            if err.status == 500:
+                raise ConfigEntryAuthFailed("Fio rejected the token") from err
+            raise UpdateFailed("Fio account request failed") from err
 
     def _collect_enable_banking(self) -> list[AccountSnapshot]:
         data: dict[str, Any] = self.entry.data
