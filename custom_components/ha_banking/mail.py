@@ -46,6 +46,10 @@ class EmailLoginError(Exception):
     """The mailbox rejected the username or password."""
 
 
+class FolderNotFound(OSError):
+    """The mailbox has no such folder. A bank whose folder is missing is skipped."""
+
+
 def normalize_mailbox_password(password: str) -> str:
     """Drop the spaces Google inserts into a 16-letter app password."""
     text = str(password).strip()
@@ -81,10 +85,21 @@ def text_from_rfc822(raw: bytes) -> MailMessage:
 
 
 def open_mailbox(host: str, port: int, username: str, password: str, folders: list[str]) -> None:
-    """Log in and open each folder. Raises EmailLoginError when the password is rejected."""
+    """Log in and open each folder. Raises EmailLoginError when the password is rejected.
+
+    A missing folder is allowed while at least one other folder exists, so a user of
+    one bank does not need a folder for every registered bank.
+    """
+    missing: FolderNotFound | None = None
+    opened = False
     for folder in dict.fromkeys(folders):
-        with _mailbox(host, port, username, password, folder):
-            pass
+        try:
+            with _mailbox(host, port, username, password, folder):
+                opened = True
+        except FolderNotFound as err:
+            missing = err
+    if not opened and missing is not None:
+        raise missing
 
 
 def fetch_air_bank_messages(
@@ -110,20 +125,29 @@ def fetch_air_bank_messages(
         folder = bank_folders.get(parser.bank_id) or parser.default_folder
         grouped.setdefault(folder, []).append(parser)
     messages: list[MailMessage] = []
+    missing: FolderNotFound | None = None
+    opened = False
     for folder, folder_parsers in grouped.items():
-        messages.extend(
-            _fetch_folder(
-                host,
-                port,
-                username,
-                password,
-                folder,
-                folder_parsers,
-                mark_seen,
-                connect,
-                since,
+        try:
+            messages.extend(
+                _fetch_folder(
+                    host,
+                    port,
+                    username,
+                    password,
+                    folder,
+                    folder_parsers,
+                    mark_seen,
+                    connect,
+                    since,
+                )
             )
-        )
+            opened = True
+        except FolderNotFound as err:
+            LOGGER.debug("Skipping mailbox folder %s: %s", folder, err)
+            missing = err
+    if not opened and missing is not None:
+        raise missing
     return messages
 
 
@@ -187,6 +211,13 @@ def _html_to_text(html: str) -> str:
     return unescape(text)
 
 
+def _quoted(folder: str) -> str:
+    """imaplib sends arguments as they are. A Gmail label with a space must be quoted."""
+    if len(folder) >= 2 and folder.startswith('"') and folder.endswith('"'):
+        return folder
+    return '"' + folder.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
 def _raw_message(status: str, fetched: list | None) -> bytes | None:
     if status != "OK" or not fetched:
         return None
@@ -213,9 +244,9 @@ def _mailbox(
             reason = imap_error_text(err)
             LOGGER.warning("Mailbox %s rejected the login: %s", host, reason)
             raise EmailLoginError(reason or "Mailbox rejected the username or password") from err
-        status, _ = client.select(folder, readonly=readonly)
+        status, _ = client.select(_quoted(folder), readonly=readonly)
         if status != "OK":
-            raise OSError("Mailbox folder was not found")
+            raise FolderNotFound(f"Mailbox folder {folder} was not found")
         yield client
     finally:
         try:

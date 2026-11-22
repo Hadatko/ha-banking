@@ -5,6 +5,7 @@ from datetime import date, datetime
 from email.message import EmailMessage
 
 from custom_components.ha_banking.mail import (
+    FolderNotFound,
     MailMessage,
     fetch_air_bank_messages,
     imap_error_text,
@@ -295,7 +296,8 @@ def test_marks_only_the_parsed_notice_as_read() -> None:
 
     @contextmanager
     def connect(host, port, username, password, folder, readonly=True):
-        assert folder == "airbank"
+        if folder != "airbank":
+            raise FolderNotFound(folder)
         assert readonly is False
         yield mailbox
 
