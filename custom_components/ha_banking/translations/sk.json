@@ -174,16 +174,6 @@
         },
         "description": "Vo Fio internetbankingu otvor Nastavenie a potom API. Vytvor token len na sledovanie účtu, nie na zadávanie platieb. Token patrí jednému účtu a začne fungovať päť minút po autorizácii. Home Assistant číta pohyby a konečný zostatok najviac za posledných 90 dní. Platby neodosiela.",
         "title": "Fio banka"
-      },
-      "dashboard": {
-        "title": "Vzhľad dashboardu",
-        "description": "Integrácia vytvorí dashboard HA Banking. Každá ďalšia banka použije rovnaký vzhľad, zmeníte ho v nastaveniach integrácie.",
-        "data": {
-          "dashboard_style": "Vzhľad dashboardu"
-        },
-        "data_description": {
-          "dashboard_style": "Modern: záložka pre každý účet a prehľad, z kariet button-card, stack-in-card a mini-graph-card (nainštalujú sa samy). Classic: pôvodná jedna stránka so vstavanými kartami a obrázkom na pozadí."
-        }
       }
     }
   },
@@ -233,14 +223,12 @@
         "data": {
           "large_payment": "Minimálna suma platby",
           "low_balance": "Nízky dostupný zostatok",
-          "install_cards": "Inštalovať karty dashboardu",
-          "dashboard_style": "Vzhľad dashboardu"
+          "install_cards": "Inštalovať karty dashboardu"
         },
         "data_description": {
           "large_payment": "Platbu oznámiť len vtedy, keď je jej suma aspoň toto číslo. Prázdne pole oznámi každú novú platbu.",
           "low_balance": "Oznámiť raz, keď dostupný zostatok klesne pod toto číslo. Znova sa oznámi, až keď zostatok stúpne nad neho. Prázdne pole toto vypne.",
-          "install_cards": "Chýbajúce karty button-card, stack-in-card a mini-graph-card pre dashboard HA Banking sa nainštalujú z Marketu Home Assistantu alebo z HACS, inak z ich vydania na GitHube.",
-          "dashboard_style": "Modern: záložka pre každý účet a prehľad, z kariet button-card, stack-in-card a mini-graph-card (nainštalujú sa samy). Classic: pôvodná jedna stránka so vstavanými kartami a obrázkom na pozadí."
+          "install_cards": "Chýbajúce karty button-card, stack-in-card a mini-graph-card pre dashboard HA Banking sa nainštalujú z Marketu Home Assistantu alebo z HACS, inak z ich vydania na GitHube."
         },
         "description": "Tieto upozornenia sú voliteľné. Udalosť o platbe sa odošle pri každej novej platbe.",
         "title": "Upozornenia"
@@ -252,12 +240,6 @@
       "options": {
         "business": "Firemný",
         "personal": "Osobný"
-      }
-    },
-    "dashboard_style": {
-      "options": {
-        "classic": "Classic",
-        "modern": "Modern"
       }
     }
   },

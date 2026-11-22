@@ -59,16 +59,6 @@ class BalanceType(StrEnum):
     FWAV = "FWAV"
 
 
-class DashboardStyle(StrEnum):
-    """Look of the generated dashboard."""
-
-    CLASSIC = "classic"
-    MODERN = "modern"
-
-
-DEFAULT_DASHBOARD_STYLE = DashboardStyle.MODERN
-
-
 class BankId(StrEnum):
     """A mailbox bank the email parser knows."""
 
@@ -112,7 +102,6 @@ CONF_ACCOUNT_NAMES = "account_names"
 CONF_LARGE_PAYMENT = "large_payment"
 CONF_LOW_BALANCE = "low_balance"
 CONF_INSTALL_CARDS = "install_cards"
-CONF_DASHBOARD_STYLE = "dashboard_style"
 SCAN_INTERVAL = timedelta(minutes=15)
 BOOKED_BALANCE_TYPES = (BalanceType.CLBD, BalanceType.ITBD, BalanceType.PRCD)
 AVAILABLE_BALANCE_TYPES = (BalanceType.CLAV, BalanceType.ITAV, BalanceType.XPCD, BalanceType.FWAV)

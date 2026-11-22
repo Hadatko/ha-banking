@@ -174,16 +174,6 @@
         },
         "description": "In Fio internet banking open Settings, then API. Create a token with account watching only, not payment entry. The token belongs to one account and starts working five minutes after you authorize it. Home Assistant reads movements and the closing balance for at most the last 90 days. It does not send payments.",
         "title": "Fio banka"
-      },
-      "dashboard": {
-        "title": "Dashboard look",
-        "description": "The integration creates the HA Banking dashboard. Every bank you add later uses the same look; you can change it in the integration options.",
-        "data": {
-          "dashboard_style": "Dashboard look"
-        },
-        "data_description": {
-          "dashboard_style": "Modern: one tab per account and an overview, built from button-card, stack-in-card and mini-graph-card (installed for you). Classic: the original single page with built-in cards and a background picture."
-        }
       }
     }
   },
@@ -233,14 +223,12 @@
         "data": {
           "large_payment": "Minimum payment amount",
           "low_balance": "Low available balance",
-          "install_cards": "Install dashboard cards",
-          "dashboard_style": "Dashboard look"
+          "install_cards": "Install dashboard cards"
         },
         "data_description": {
           "large_payment": "Announce a payment only when its amount is at least this number. Leave it empty to announce every new payment.",
           "low_balance": "Announce once when the available balance falls below this number. It can announce again after the balance rises above it. Leave it empty to turn this off.",
-          "install_cards": "Install button-card, stack-in-card and mini-graph-card for the HA Banking dashboard when they are missing. They come from the Home Assistant Marketplace or HACS, otherwise from their GitHub release.",
-          "dashboard_style": "Modern: one tab per account and an overview, built from button-card, stack-in-card and mini-graph-card (installed for you). Classic: the original single page with built-in cards and a background picture."
+          "install_cards": "Install button-card, stack-in-card and mini-graph-card for the HA Banking dashboard when they are missing. They come from the Home Assistant Marketplace or HACS, otherwise from their GitHub release."
         },
         "description": "These alerts are optional. The payment event is still fired for every new payment.",
         "title": "Alerts"
@@ -252,12 +240,6 @@
       "options": {
         "business": "Business",
         "personal": "Personal"
-      }
-    },
-    "dashboard_style": {
-      "options": {
-        "classic": "Classic",
-        "modern": "Modern"
       }
     }
   },

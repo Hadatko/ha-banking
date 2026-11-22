@@ -19,20 +19,16 @@ from homeassistant.helpers import issue_registry as ir
 
 from .cards import async_install_cards, async_missing_cards
 from .const import (
-    CONF_DASHBOARD_STYLE,
     CONF_INSTALL_CARDS,
-    DEFAULT_DASHBOARD_STYLE,
     DOMAIN,
-    DashboardStyle,
     Direction,
     SensorKey,
 )
-from .dashboard_classic import async_register_backgrounds, build_classic_dashboard, register_theme
 
 LOGGER = logging.getLogger(__name__)
 
 DASHBOARD_PATH = "ha-banking"
-DASHBOARD_VERSION = 12
+DASHBOARD_VERSION = 13
 OVERVIEW_PATH = "overview"
 ISSUE_CARDS = "dashboard_missing_cards"
 HEAD = "ha_banking_head"
@@ -659,45 +655,20 @@ def _overview(accounts: list[dict], copy: dict) -> dict:
 
 async def async_setup_dashboard(hass: HomeAssistant) -> None:
     """Create or update the HA Banking dashboard from the current sensors."""
-    from homeassistant.util import dt as dt_util
-
     accounts = _accounts(hass)
-    style = dashboard_style(hass)
-    today = dt_util.now().date()
     store = hass.data.setdefault(DOMAIN, {})
-    if style == DashboardStyle.CLASSIC:
-        await async_register_backgrounds(hass, store)
-        register_theme(hass)
+    language = hass.config.language or "en"
     signature = (
         DASHBOARD_VERSION,
-        style,
-        # The classic charts show a window that ends this month.
-        today.strftime("%Y-%m") if style == DashboardStyle.CLASSIC else "",
-        (hass.config.language or "en"),
+        language,
         tuple((account["name"], tuple(sorted(account["sensors"].items()))) for account in accounts),
     )
     if store.get("dashboard_signature") == signature:
         return
-    language = hass.config.language or "en"
-    if style == DashboardStyle.CLASSIC:
-        await _save_dashboard(hass, build_classic_dashboard(accounts, language, today))
-        ir.async_delete_issue(hass, DOMAIN, ISSUE_CARDS)
-    else:
-        await _save_dashboard(hass, build_dashboard(accounts, language))
+    await _save_dashboard(hass, build_dashboard(accounts, language))
     store["dashboard_signature"] = signature
-    if accounts and style == DashboardStyle.MODERN:
+    if accounts:
         await async_check_cards(hass)
-
-
-def dashboard_style(hass: HomeAssistant) -> DashboardStyle:
-    """The style of the oldest entry; every entry shares one dashboard."""
-    entries = sorted(hass.config_entries.async_entries(DOMAIN), key=lambda entry: entry.created_at)
-    for entry in entries:
-        try:
-            return DashboardStyle(entry.options.get(CONF_DASHBOARD_STYLE, DEFAULT_DASHBOARD_STYLE))
-        except ValueError:
-            continue
-    return DEFAULT_DASHBOARD_STYLE
 
 
 async def async_check_cards(hass: HomeAssistant) -> None:

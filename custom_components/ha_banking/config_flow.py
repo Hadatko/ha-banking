@@ -26,10 +26,7 @@ from .const import (
     CONF_BANK_FOLDERS,
     CONF_IMAP_HOST,
     CONF_ACCOUNT_NAMES,
-    CONF_DASHBOARD_STYLE,
     CONF_INSTALL_CARDS,
-    DEFAULT_DASHBOARD_STYLE,
-    DashboardStyle,
     CONF_LARGE_PAYMENT,
     CONF_LOW_BALANCE,
     CONF_MARK_SEEN,
@@ -165,7 +162,6 @@ class AirBankConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
         self._csas: dict[str, Any] = {}
         self._aspsp_names: list[str] = []
         self._enable_state: str | None = None
-        self._pending_entry: tuple[str, dict[str, Any]] = ("", {})
 
     @property
     def logger(self) -> logging.Logger:
@@ -550,25 +546,8 @@ class AirBankConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
         )
 
     async def _async_create(self, title: str, data: dict[str, Any]) -> ConfigFlowResult:
-        """Create the entry. The first entry picks the dashboard style; later ones share it."""
-        from .dashboard import dashboard_style
-
-        if self.hass.config_entries.async_entries(DOMAIN):
-            options = {CONF_DASHBOARD_STYLE: dashboard_style(self.hass)}
-            return self.async_create_entry(title=title, data=data, options=options)
-        self._pending_entry = (title, data)
-        return await self.async_step_dashboard()
-
-    async def async_step_dashboard(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Choose the look of the generated dashboard."""
-        if user_input is not None:
-            title, data = self._pending_entry
-            options = {CONF_DASHBOARD_STYLE: user_input[CONF_DASHBOARD_STYLE]}
-            return self.async_create_entry(title=title, data=data, options=options)
-        return self.async_show_form(
-            step_id="dashboard",
-            data_schema=vol.Schema({vol.Required(CONF_DASHBOARD_STYLE, default=DEFAULT_DASHBOARD_STYLE): _style_selector()}),
-        )
+        """Create the entry. The dashboard is always the modern overview."""
+        return self.async_create_entry(title=title, data=data)
 
     def _start_enable_consent(self) -> str:
         self._enable_state = authorization_state(self.hass, self.flow_id)
@@ -663,16 +642,6 @@ def _enable_credentials(data: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _style_selector() -> selector.SelectSelector:
-    return selector.SelectSelector(
-        selector.SelectSelectorConfig(
-            options=[style.value for style in DashboardStyle],
-            translation_key=CONF_DASHBOARD_STYLE,
-            mode=selector.SelectSelectorMode.LIST,
-        )
-    )
-
-
 def _alert_schema(current: Mapping[str, Any]) -> vol.Schema:
     fields: dict[Any, Any] = {}
     number = selector.NumberSelector(
@@ -681,8 +650,6 @@ def _alert_schema(current: Mapping[str, Any]) -> vol.Schema:
     for key in (CONF_LARGE_PAYMENT, CONF_LOW_BALANCE):
         marker = vol.Optional(key, default=current[key]) if current.get(key) not in (None, "") else vol.Optional(key)
         fields[marker] = number
-    style = current.get(CONF_DASHBOARD_STYLE, DEFAULT_DASHBOARD_STYLE)
-    fields[vol.Required(CONF_DASHBOARD_STYLE, default=style)] = _style_selector()
     fields[vol.Optional(CONF_INSTALL_CARDS, default=current.get(CONF_INSTALL_CARDS, True))] = bool
     return vol.Schema(fields)
 
@@ -699,14 +666,6 @@ class AlertOptionsFlow(OptionsFlow):
                 if user_input.get(key) not in (None, "")
             }
             stored[CONF_INSTALL_CARDS] = bool(user_input.get(CONF_INSTALL_CARDS, True))
-            style = user_input.get(CONF_DASHBOARD_STYLE, DEFAULT_DASHBOARD_STYLE)
-            stored[CONF_DASHBOARD_STYLE] = style
-            # One dashboard for every entry: keep the style the same everywhere.
-            for other in self.hass.config_entries.async_entries(DOMAIN):
-                if other.entry_id != self.config_entry.entry_id and other.options.get(CONF_DASHBOARD_STYLE) != style:
-                    self.hass.config_entries.async_update_entry(
-                        other, options={**other.options, CONF_DASHBOARD_STYLE: style}
-                    )
             return self.async_create_entry(data=stored)
         return self.async_show_form(step_id="init", data_schema=_alert_schema(self.config_entry.options))
 

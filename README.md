@@ -148,21 +148,11 @@ Each account becomes one device with these sensors. Every sensor shows that bank
 
 ## Dashboard
 
-The integration adds a sidebar dashboard named HA Banking. Adding the first bank asks for its look, **Modern** or **Classic**; later banks use the same one, and the integration options change it for every bank.
-
-**Classic** is the original single page: a section per account with the latest payments, a payment list and statistics-graph charts, on a background picture that follows the light or dark mode. Its charts read recorder statistics that the integration stores on each update.
-
-**Modern** is described below. The first tab, Overview, adds up every account: the total available balance (accounts in another currency are listed beside it), this month and this year, the payments of all accounts by date, and the monthly charts. The sums and charts use the currency most accounts have. Then there is one tab per account: balance with a 30-day sparkline, this month and this year (net, incoming, outgoing), recent payments, the balance at each month end and incoming and outgoing by month for the last 13 months. Tap a row to open its sensor. The monthly charts come from the `months` attribute of the recent payments sensor, so they show the history at once instead of building it up in the recorder.
+The integration adds a sidebar dashboard named HA Banking. The first tab, Overview, adds up every account: the total available balance (accounts in another currency are listed beside it), this month and this year, the payments of all accounts by date, and the monthly charts. The sums and charts use the currency most accounts have. Then there is one tab per account: balance with a 30-day sparkline, this month and this year (net, incoming, outgoing), recent payments, the balance at each month end, and incoming and outgoing by month for the last 13 months. Tap a row to open its sensor. The monthly charts come from the `months` attribute of the recent payments sensor, so they show the history at once.
 
 The dashboard uses three custom cards: [button-card](https://github.com/custom-cards/button-card), [stack-in-card](https://github.com/custom-cards/stack-in-card) and [mini-graph-card](https://github.com/kalkih/mini-graph-card). When one is missing, the integration installs it from the Home Assistant Marketplace or HACS, otherwise from the card's GitHub release into `/config/www/ha_banking/cards/`. Turn off **Install dashboard cards** in the integration options to do this yourself; a repair issue then lists the missing cards and can install them.
 
-![HA Banking dashboard. The amounts on the chart axes and in the payment list are hidden.](docs/dashboard.png)
-
-Each account starts with the latest payment in each direction and the recent payments. Below that is a line of the available balance for the last year, then bar charts for the same balance, the last 12 months including the current month (incoming, outgoing, net), and this year. The bars use the sensor state, because a monetary sensor does not record an average. A new notice adds another point.
-
-![HA Banking dashboard. The amounts on the chart axes and in the payment list are hidden.](docs/dashboard.png)
-
-Each account starts with the latest payment in each direction and the recent payments. Below that is a line of the available balance for the last year, then bar charts for the same balance, the last 12 months including the current month (incoming, outgoing, net), and this year. The bars use the sensor state, because a monetary sensor does not record an average. A new notice adds another point.
+![HA Banking overview. The amounts and the names are examples.](docs/dashboard.png)
 
 ## Notifications
 
