@@ -1,0 +1,310 @@
+"""Bank email parsers. A new bank is another parser in BANK_PARSERS."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, replace
+from datetime import date, datetime
+import re
+import unicodedata
+
+from .snapshot import (
+    AccountSnapshot,
+    PaymentRecord,
+    PaymentView,
+    bank_logo_url,
+    limit_payments,
+    payment_id,
+    period_totals,
+)
+
+
+@dataclass(frozen=True)
+class MailMessage:
+    """One mailbox message reduced to the fields a bank parser needs."""
+
+    sender: str
+    subject: str
+    body: str
+    sent_at: datetime | None
+
+
+@dataclass(frozen=True)
+class ParsedNotice:
+    """One balance-change notice from a registered bank."""
+
+    account_number: str
+    account_id: str
+    name: str
+    institution: str
+    amount: float
+    currency: str
+    direction: str
+    variable_symbol: str | None
+    sent_at: datetime | None
+    subject: str
+    configuration_url: str | None
+    available_balance: float | None = None
+    country: str = "CZ"
+    counterparty: str | None = None
+
+
+class AirBankNoticeParser:
+    """Air Bank balance mail: the account number, bank code 3030, and the amount."""
+
+    bank_id = "airbank"
+    default_folder = "airbank"
+    sender = "info@airbank.cz"
+    _sender = re.compile(r"(?:^|[\s<\"])info@airbank\.cz(?=$|[\s>\"])", re.IGNORECASE)
+    _movement = re.compile(
+        r"cislo\s+([0-9]+)/3030\s+se\s+(zvysil|snizil)\s+o\s+castku\s+"
+        r"([0-9][0-9 .,\u00a0]*)\s*(?:czk|kc)",
+        re.IGNORECASE,
+    )
+    _symbol = re.compile(r"variabilni\s+symbol:\s*([0-9]+)", re.IGNORECASE)
+    _label = re.compile(
+        r"(?:zůstatek|zustatek)\s+na\s+(?:účtu|uctu)\s+(.+?)\s+(?:číslo|cislo)\s+[0-9]+/3030",
+        re.IGNORECASE,
+    )
+    _available = re.compile(
+        r"(?:dostupný|dostupny)\s+(?:zůstatek|zustatek)\s+k\s+.+?\s+je\s+"
+        r"([0-9][0-9 .,\u00a0]*)\s*(?:czk|kč|kc)",
+        re.IGNORECASE,
+    )
+    _counterparty = re.compile(
+        r"(?:příchozí|prichozi|odchozí|odchozi)\s+(?:úhrada|uhrada)\s+(?:z|na)\s+"
+        r"(?:účtu|uctu)\s+(.+?)\s+(?:číslo|cislo)\s+[0-9]+/3030",
+        re.IGNORECASE,
+    )
+
+    def parse(self, message: MailMessage) -> ParsedNotice | None:
+        if self._sender.search(message.sender) is None:
+            return None
+        folded = _fold(message.body)
+        match = self._movement.search(folded)
+        if match is None:
+            return None
+        symbol = self._symbol.search(folded)
+        account_number = match.group(1)
+        label = self._label.search(message.body)
+        available = self._available.search(message.body) or self._available.search(folded)
+        party = self._counterparty.search(message.body) or self._counterparty.search(folded)
+        account_name = label.group(1).strip() if label and label.group(1).strip() else f"Air Bank {account_number}"
+        counterparty = party.group(1).strip() if party and party.group(1).strip() else None
+        return ParsedNotice(
+            account_number=account_number,
+            account_id=f"{account_number}/3030",
+            name=account_name,
+            institution="Air Bank",
+            amount=_amount(match.group(3)),
+            currency="CZK",
+            direction="incoming" if match.group(2).lower() == "zvysil" else "outgoing",
+            variable_symbol=symbol.group(1) if symbol else None,
+            sent_at=message.sent_at,
+            subject=message.subject,
+            configuration_url="https://ib.airbank.cz/",
+            available_balance=_amount(available.group(1)) if available else None,
+            counterparty=counterparty,
+        )
+
+
+BANK_PARSERS = (AirBankNoticeParser(),)
+
+
+def parse_air_bank_notice(message: MailMessage) -> ParsedNotice | None:
+    """Return a payment from an Air Bank notice, or None when the mail is not one."""
+    return AirBankNoticeParser().parse(message)
+
+
+def parse_notice(message: MailMessage, parsers=BANK_PARSERS) -> ParsedNotice | None:
+    """Return the first registered bank that recognizes this message."""
+    for parser in parsers:
+        notice = parser.parse(message)
+        if notice is not None:
+            return notice
+    return None
+
+
+def parse_account_names(raw: str | dict[str, str]) -> dict[str, str]:
+    """Read lines of ``account number=name``. Blank lines and lines without ``=`` are ignored."""
+    if isinstance(raw, dict):
+        return {
+            "".join(str(number).split()): str(name).strip()
+            for number, name in raw.items()
+            if "".join(str(number).split()) and str(name).strip()
+        }
+    names: dict[str, str] = {}
+    for line in str(raw or "").splitlines():
+        if "=" not in line:
+            continue
+        number, name = line.split("=", 1)
+        number = "".join(number.split())
+        name = name.strip()
+        if number and name:
+            names[number] = name
+    return names
+
+
+def format_account_names(mapping: dict[str, str]) -> str:
+    """Show a stored account-name mapping as one ``number=name`` line each."""
+    return "\n".join(f"{number}={name}" for number, name in mapping.items())
+
+
+def apply_account_names(snapshots: list[AccountSnapshot], mapping: dict[str, str]) -> list[AccountSnapshot]:
+    """Replace a snapshot name when its account number is in the mapping."""
+    if not mapping:
+        return list(snapshots)
+    return [_with_account_name(snapshot, mapping) for snapshot in snapshots]
+
+
+def _with_account_name(snapshot: AccountSnapshot, mapping: dict[str, str]) -> AccountSnapshot:
+    number = snapshot.account_id.split("/", 1)[0]
+    name = mapping.get(snapshot.account_id) or mapping.get(number)
+    if not name:
+        return snapshot
+    return replace(snapshot, name=name)
+
+
+def folder_field(bank_id: str) -> str:
+    """Config-flow field that stores one bank's mailbox folder."""
+    return f"folder_{bank_id}"
+
+
+def configured_bank_folders(data: dict, parsers=BANK_PARSERS) -> dict[str, str]:
+    """Return a folder for every bank. An older single folder applies to all of them."""
+    stored = data.get("bank_folders") or {}
+    legacy = data.get("imap_folder")
+    folders: dict[str, str] = {}
+    for parser in parsers:
+        raw = data.get(folder_field(parser.bank_id))
+        if raw is None:
+            raw = stored.get(parser.bank_id, legacy)
+        if raw is None:
+            raw = parser.default_folder
+        folders[parser.bank_id] = str(raw).strip() or parser.default_folder
+    return folders
+
+
+def imap_sender_criteria(parsers=BANK_PARSERS) -> list[str]:
+    """IMAP search keys for every registered bank sender."""
+    senders = [parser.sender for parser in parsers]
+    if not senders:
+        return []
+    criteria = ["FROM", senders[-1]]
+    for sender in reversed(senders[:-1]):
+        criteria = ["OR", "FROM", sender, *criteria]
+    return criteria
+
+
+def snapshots_from_messages(
+    messages: list[MailMessage],
+    parsers=BANK_PARSERS,
+    today: date | None = None,
+) -> list[AccountSnapshot]:
+    """Keep the newest payment in each direction and sum notices from the current month."""
+    if today is None:
+        today = date.today()
+    grouped: dict[str, list[tuple[int, ParsedNotice]]] = {}
+    for index, message in enumerate(messages):
+        notice = parse_notice(message, parsers)
+        if notice is None:
+            continue
+        grouped.setdefault(notice.account_id, []).append((index, notice))
+    return [_snapshot(notices, today) for notices in grouped.values()]
+
+
+def _snapshot(notices: list[tuple[int, ParsedNotice]], today: date) -> AccountSnapshot:
+    incoming = _newest(notices, "incoming")
+    outgoing = _newest(notices, "outgoing")
+    sample = _latest(notices)
+    totals = period_totals(
+        [(notice.sent_at.date() if notice.sent_at else None, notice.direction, notice.amount) for _, notice in notices],
+        today,
+    )
+    return AccountSnapshot(
+        account_id=sample.account_id,
+        name=sample.name,
+        iban="",
+        currency=sample.currency,
+        product="Email",
+        booked_balance=None,
+        available_balance=_latest_available_balance(notices),
+        latest_incoming=_payment(incoming) if incoming else None,
+        latest_outgoing=_payment(outgoing) if outgoing else None,
+        latest_status=None,
+        institution=sample.institution,
+        configuration_url=sample.configuration_url,
+        logo_url=bank_logo_url(sample.institution, sample.country),
+        payments=_notice_payments(notices),
+        **totals,
+    )
+
+
+def _latest(notices: list[tuple[int, ParsedNotice]]) -> ParsedNotice:
+    return max(notices, key=lambda item: (item[1].sent_at or datetime.min, item[0]))[1]
+
+
+def _latest_available_balance(notices: list[tuple[int, ParsedNotice]]) -> float | None:
+    reported = [item for item in notices if item[1].available_balance is not None]
+    if not reported:
+        return None
+    return _latest(reported).available_balance
+
+
+def _newest(notices: list[tuple[int, ParsedNotice]], direction: str) -> ParsedNotice | None:
+    chosen = [item for item in notices if item[1].direction == direction]
+    if not chosen:
+        return None
+    return max(chosen, key=lambda item: (item[1].sent_at or datetime.min, item[0]))[1]
+
+
+def _notice_payments(notices: list[tuple[int, ParsedNotice]]) -> tuple[PaymentRecord, ...]:
+    records: list[PaymentRecord] = []
+    for _, notice in notices:
+        booked = notice.sent_at.isoformat() if notice.sent_at else None
+        records.append(
+            PaymentRecord(
+                payment_id=payment_id(
+                    notice.account_id,
+                    notice.direction,
+                    notice.amount,
+                    booked,
+                    notice.variable_symbol or notice.subject or "",
+                ),
+                direction=notice.direction,
+                amount=notice.amount,
+                currency=notice.currency,
+                booked=booked,
+                reference=notice.variable_symbol,
+                message=notice.subject or None,
+                counterparty=notice.counterparty,
+            )
+        )
+    return limit_payments(records)
+
+
+def _payment(notice: ParsedNotice) -> PaymentView:
+    booked = notice.sent_at.date().isoformat() if notice.sent_at else None
+    return PaymentView(
+        amount=notice.amount,
+        currency=notice.currency,
+        counterparty=notice.counterparty,
+        status=None,
+        booking_date=booked,
+        value_date=None,
+        message=None,
+        reference=notice.variable_symbol,
+        entry_reference=None,
+        information=notice.subject or None,
+    )
+
+
+def _fold(text: str) -> str:
+    normalized = unicodedata.normalize("NFKD", text)
+    return "".join(character for character in normalized if not unicodedata.combining(character))
+
+
+def _amount(raw: str) -> float:
+    cleaned = raw.replace("\u00a0", "").replace(" ", "")
+    if "," in cleaned:
+        cleaned = cleaned.replace(".", "").replace(",", ".")
+    return float(cleaned)

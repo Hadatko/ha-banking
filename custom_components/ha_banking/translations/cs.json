@@ -1,0 +1,188 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Toto připojení je už přidané.",
+      "authorize_url_timeout": "Čas na přípravu přihlášení do Air Bank vypršel.",
+      "cannot_connect": "Home Assistant po přihlášení nepřečetl účty.",
+      "oauth_error": "Přihlášení do banky nevrátilo platný kód.",
+      "oauth_failed": "Banka přihlášení odmítla.",
+      "oauth_timeout": "Čas na dokončení přihlášení do Air Bank vypršel.",
+      "oauth_unauthorized": "Air Bank tuto aplikaci neschválila.",
+      "reauth_successful": "Přihlášení do Air Bank bylo obnoveno.",
+      "user_rejected_authorize": "Přihlášení do Air Bank bylo zrušeno."
+    },
+    "error": {
+      "bank_unavailable": "Enable Banking pro tuto zemi nevrátil žádnou banku.",
+      "invalid_country": "Země banky musí být dvě písmena, například CZ.",
+      "cannot_connect": "Enable Banking nespustil přihlášení do Air Bank.",
+      "imap_failed": "Home Assistant tuto schránku neotevřel.",
+      "invalid_auth": "Schránka toto jméno nebo heslo odmítla. {reason}",
+      "invalid_cert": "Soubor certifikátu nebo soukromého klíče nebyl nalezen.",
+      "invalid_key": "Soubor soukromého klíče Enable Banking nebyl nalezen nebo jím nelze podepisovat požadavky."
+    },
+    "step": {
+      "direct": {
+        "data": {
+          "client_cert": "Klientský certifikát",
+          "client_id": "Client ID",
+          "client_key": "Soukromý klíč",
+          "client_secret": "Client secret",
+          "sandbox": "Sandbox"
+        },
+        "data_description": {
+          "client_cert": "Cesta k PEM souboru PSD2 certifikátu na počítači s Home Assistantem.",
+          "client_key": "Cesta k odpovídajícímu PEM souboru soukromého klíče.",
+          "sandbox": "Použít sandbox Air Bank místo ostrého provozu."
+        },
+        "description": "Přímé Open API Air Bank pro aplikaci, která už má licenci na informace o účtu. Jako přesměrování zaregistruj {redirect_uri}. Z Home Assistanta se platby neodesílají.",
+        "title": "Certifikát Air Bank"
+      },
+      "email": {
+        "data": {
+          "account_names": "Názvy účtů",
+          "folder_airbank": "Složka Air Bank",
+          "imap_host": "IMAP server",
+          "imap_password": "Heslo do schránky",
+          "imap_port": "IMAP port",
+          "imap_username": "Jméno do schránky",
+          "mark_seen": "Označit avíza jako přečtená"
+        },
+        "data_description": {
+          "account_names": "Jeden účet na každý řádek. Číslo a název odděluje rovná se, ne mezera.\n1234567890=Hlavní účet\n9999999999=Spořicí účet",
+          "folder_airbank": "Složka nebo štítek v Gmailu pro avíza Air Bank. Každá banka má vlastní složku.",
+          "mark_seen": "Po importu avíza zprávu označ jako přečtenou. Zpráva, kterou se nepodařilo přečíst, zůstane nepřečtená.",
+          "imap_host": "Pro Gmail je to imap.gmail.com. Když poskytovatel vyžaduje heslo aplikace, použij ho.",
+          "imap_password": "Zůstává na tomto Home Assistantovi a slouží jen ke čtení pošty."
+        },
+        "description": "Čte poslední příchozí a odchozí platbu z e-mailů Air Bank ve vlastní schránce. V internetovém bankovnictví Air Bank otevři Účty a karty, účet, Možnosti, Info o dění na účtu a nech posílat změny zůstatku e-mailem do této schránky. Každé avízo uvádí dostupný zůstatek po změně. Zaúčtovaný zůstatek v mailu není, proto ten senzor zůstane prázdný. Avíza se sečtou za aktuální rok i za aktuální měsíc, vždy jako příjmy, výdaje a rozdíl. Z Home Assistanta se platby neodesílají.",
+        "title": "E-mailová avíza"
+      },
+      "email_reauth_confirm": {
+        "data": {
+          "account_names": "Názvy účtů",
+          "folder_airbank": "Složka Air Bank",
+          "imap_host": "IMAP server",
+          "imap_password": "Heslo do schránky",
+          "imap_port": "IMAP port",
+          "imap_username": "Jméno do schránky",
+          "mark_seen": "Označit avíza jako přečtená"
+        },
+        "data_description": {
+          "account_names": "Jeden účet na každý řádek. Číslo a název odděluje rovná se, ne mezera.\n1234567890=Hlavní účet\n9999999999=Spořicí účet",
+          "folder_airbank": "Složka nebo štítek v Gmailu pro avíza Air Bank. Každá banka má vlastní složku.",
+          "mark_seen": "Po importu avíza zprávu označ jako přečtenou. Zpráva, kterou se nepodařilo přečíst, zůstane nepřečtená."
+        },
+        "description": "Schránka uložené heslo odmítla. Zadej ho znovu. Home Assistant dál čte jen avíza Air Bank.",
+        "title": "Znovu připojit schránku"
+      },
+      "enable_banking": {
+        "data": {
+          "application_id": "ID aplikace",
+          "client_key": "Soukromý klíč",
+          "country": "Země banky",
+          "psu_type": "Majitel účtu"
+        },
+        "data_description": {
+          "application_id": "ID aplikace z ovládacího panelu Enable Banking.",
+          "client_key": "Cesta k PEM souboru soukromého klíče této aplikace na počítači s Home Assistantem.",
+          "country": "Dvě písmena země banky, například CZ.",
+          "psu_type": "Osobní účet je soukromý. Firemní účet patří společnosti."
+        },
+        "description": "Použij vlastní aplikaci Enable Banking. Mezi povolené adresy přesměrování přidej {redirect_uri}. Další krok ukáže banky dostupné v zadané zemi. V produkci si povol jen své účty. Sandbox nebo produkci vybíráš při založení aplikace. Z Home Assistanta se platby neodesílají.",
+        "title": "Enable Banking"
+      },
+      "enable_bank": {
+        "data": {
+          "aspsp_name": "Banka"
+        },
+        "description": "Vyber banku v zemi {country}. Čtou se jen zůstatky a transakce. Z Home Assistanta se platby neodesílají.",
+        "title": "Vybrat banku"
+      },
+      "enable_consent": {
+        "description": "Přihlas se do vybrané banky přes Enable Banking.",
+        "title": "Přihlášení do banky"
+      },
+      "enable_reauth_confirm": {
+        "description": "Přihlas se znovu do vybrané banky přes Enable Banking. Adresa přesměrování aplikace musí být {redirect_uri}.",
+        "title": "Znovu připojit Enable Banking"
+      },
+      "reauth_confirm": {
+        "description": "Přihlas se znovu do Air Bank. Přesměrování aplikace musí být {redirect_uri}.",
+        "title": "Znovu připojit Air Bank"
+      },
+      "user": {
+        "description": "Poslední platba z e-mailů Air Bank, nebo Enable Banking, nebo licencovaný certifikát Air Bank. E-mailová avíza obsahují dostupný zůstatek po změně. Zaúčtovaný zůstatek zůstává prázdný. Z Home Assistanta se platby neodesílají.",
+        "menu_options": {
+          "direct": "Certifikát Air Bank",
+          "email": "E-mailová avíza",
+          "enable_banking": "Enable Banking"
+        },
+        "title": "Připojit banku"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "available_balance": {
+        "name": "Disponibilní zůstatek"
+      },
+      "booked_balance": {
+        "name": "Zaúčtovaný zůstatek"
+      },
+      "incoming_payment": {
+        "name": "Poslední příchozí platba"
+      },
+      "outgoing_payment": {
+        "name": "Poslední odchozí platba"
+      },
+      "transaction_status": {
+        "name": "Stav poslední transakce"
+      },
+      "year_incoming": {
+        "name": "Příjmy tento rok"
+      },
+      "year_outgoing": {
+        "name": "Výdaje tento rok"
+      },
+      "year_net": {
+        "name": "Rozdíl tento rok"
+      },
+      "month_incoming": {
+        "name": "Příjmy tento měsíc"
+      },
+      "month_outgoing": {
+        "name": "Výdaje tento měsíc"
+      },
+      "month_net": {
+        "name": "Rozdíl tento měsíc"
+      },
+      "recent_payments": {
+        "name": "Poslední platby"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "large_payment": "Minimální částka platby",
+          "low_balance": "Nízký dostupný zůstatek"
+        },
+        "data_description": {
+          "large_payment": "Platbu oznámit jen tehdy, když je její částka alespoň toto číslo. Prázdné pole oznámí každou novou platbu.",
+          "low_balance": "Oznámit jednou, když dostupný zůstatek klesne pod toto číslo. Znovu se oznámí, až když zůstatek stoupne nad něj. Prázdné pole toto vypne."
+        },
+        "description": "Tato upozornění jsou volitelná. Událost o platbě se odešle při každé nové platbě.",
+        "title": "Upozornění"
+      }
+    }
+  },
+  "selector": {
+    "psu_type": {
+      "options": {
+        "business": "Firemní",
+        "personal": "Osobní"
+      }
+    }
+  }
+}

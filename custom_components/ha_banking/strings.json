@@ -1,0 +1,188 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "This connection is already configured.",
+      "authorize_url_timeout": "Timeout while preparing the Air Bank login.",
+      "cannot_connect": "Home Assistant could not read the accounts after login.",
+      "oauth_error": "The bank login did not return a valid code.",
+      "oauth_failed": "The bank rejected the login.",
+      "oauth_timeout": "Timeout while finishing the Air Bank login.",
+      "oauth_unauthorized": "Air Bank did not authorize this application.",
+      "reauth_successful": "Air Bank login was updated.",
+      "user_rejected_authorize": "The Air Bank login was cancelled."
+    },
+    "error": {
+      "bank_unavailable": "Enable Banking returned no bank for this country.",
+      "invalid_country": "The bank country must be two letters, for example CZ.",
+      "cannot_connect": "Enable Banking did not start the Air Bank login.",
+      "imap_failed": "Home Assistant could not open this mailbox.",
+      "invalid_auth": "The mailbox rejected this username or password. {reason}",
+      "invalid_cert": "The certificate or private key file was not found.",
+      "invalid_key": "The Enable Banking private key file was not found or cannot sign requests."
+    },
+    "step": {
+      "direct": {
+        "data": {
+          "client_cert": "Client certificate",
+          "client_id": "Client ID",
+          "client_key": "Client private key",
+          "client_secret": "Client secret",
+          "sandbox": "Sandbox"
+        },
+        "data_description": {
+          "client_cert": "Path to the PSD2 certificate PEM file on the Home Assistant host.",
+          "client_key": "Path to the matching private key PEM file.",
+          "sandbox": "Use the Air Bank sandbox instead of production."
+        },
+        "description": "Direct Air Bank Open API for an application that already has an account-information licence. Register {redirect_uri} as the redirect URI. Payments cannot be sent from Home Assistant.",
+        "title": "Air Bank certificate"
+      },
+      "email": {
+        "data": {
+          "account_names": "Account names",
+          "folder_airbank": "Air Bank folder",
+          "imap_host": "IMAP server",
+          "imap_password": "Mailbox password",
+          "imap_port": "IMAP port",
+          "imap_username": "Mailbox username",
+          "mark_seen": "Mark notices as read"
+        },
+        "data_description": {
+          "account_names": "One account on each line. The number and the name are separated by an equals sign, not by a space.\n1234567890=Main account\n9999999999=Savings account",
+          "folder_airbank": "Mailbox folder or Gmail label for Air Bank notices. Each bank has its own folder.",
+          "mark_seen": "After a notice is imported, mark that message read. Mail that could not be parsed stays unread.",
+          "imap_host": "For Gmail this is imap.gmail.com. Use an app password when the provider requires one.",
+          "imap_password": "Stored on this Home Assistant host and used only to read mail."
+        },
+        "description": "Read the latest incoming and outgoing payment from Air Bank emails in your own mailbox. In Air Bank internet banking, open Účty a karty, the account, Možnosti, Info o dění na účtu, and send balance changes by email to this mailbox. Each notice states the available balance after the change. The booked balance is not in the mail, so that sensor stays empty. Notices are summed for the current year and the current month, each as incoming, outgoing, and net. Payments cannot be sent from Home Assistant.",
+        "title": "Email notices"
+      },
+      "email_reauth_confirm": {
+        "data": {
+          "account_names": "Account names",
+          "folder_airbank": "Air Bank folder",
+          "imap_host": "IMAP server",
+          "imap_password": "Mailbox password",
+          "imap_port": "IMAP port",
+          "imap_username": "Mailbox username",
+          "mark_seen": "Mark notices as read"
+        },
+        "data_description": {
+          "account_names": "One account on each line. The number and the name are separated by an equals sign, not by a space.\n1234567890=Main account\n9999999999=Savings account",
+          "folder_airbank": "Mailbox folder or Gmail label for Air Bank notices. Each bank has its own folder.",
+          "mark_seen": "After a notice is imported, mark that message read. Mail that could not be parsed stays unread."
+        },
+        "description": "The mailbox rejected the saved password. Enter it again. Home Assistant keeps reading only Air Bank balance notices.",
+        "title": "Reconnect the mailbox"
+      },
+      "enable_banking": {
+        "data": {
+          "application_id": "Application ID",
+          "client_key": "Private key",
+          "country": "Bank country",
+          "psu_type": "Account holder"
+        },
+        "data_description": {
+          "application_id": "Application ID from the Enable Banking control panel.",
+          "client_key": "Path to this application's private key PEM file on the Home Assistant host.",
+          "country": "Two-letter country of the bank, for example CZ.",
+          "psu_type": "Personal covers a private account. Business covers a company account."
+        },
+        "description": "Use your own Enable Banking application. Register {redirect_uri} as an allowed redirect URL. The next step lists the banks available in the country you enter. In production, whitelist only your own accounts. Sandbox or production is chosen when the application is created. Payments cannot be sent from Home Assistant.",
+        "title": "Enable Banking"
+      },
+      "enable_bank": {
+        "data": {
+          "aspsp_name": "Bank"
+        },
+        "description": "Choose the bank in {country}. Only balances and transactions are read. Payments cannot be sent from Home Assistant.",
+        "title": "Choose the bank"
+      },
+      "enable_consent": {
+        "description": "Sign in at the selected bank through Enable Banking.",
+        "title": "Sign in at the bank"
+      },
+      "enable_reauth_confirm": {
+        "description": "Sign in again at the selected bank through Enable Banking. The application redirect URL must be {redirect_uri}.",
+        "title": "Reconnect Enable Banking"
+      },
+      "reauth_confirm": {
+        "description": "Sign in again at Air Bank. The application redirect URI must be {redirect_uri}.",
+        "title": "Reconnect Air Bank"
+      },
+      "user": {
+        "description": "Read the latest payment from Air Bank emails, or use Enable Banking, or a licensed Air Bank certificate. Email notices include the available balance after each change. The booked balance stays empty. Payments cannot be sent from Home Assistant.",
+        "menu_options": {
+          "direct": "Air Bank certificate",
+          "email": "Email notices",
+          "enable_banking": "Enable Banking"
+        },
+        "title": "Connect a bank"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "available_balance": {
+        "name": "Available balance"
+      },
+      "booked_balance": {
+        "name": "Booked balance"
+      },
+      "incoming_payment": {
+        "name": "Last incoming payment"
+      },
+      "outgoing_payment": {
+        "name": "Last outgoing payment"
+      },
+      "transaction_status": {
+        "name": "Latest transaction status"
+      },
+      "year_incoming": {
+        "name": "Incoming this year"
+      },
+      "year_outgoing": {
+        "name": "Outgoing this year"
+      },
+      "year_net": {
+        "name": "Net this year"
+      },
+      "month_incoming": {
+        "name": "Incoming this month"
+      },
+      "month_outgoing": {
+        "name": "Outgoing this month"
+      },
+      "month_net": {
+        "name": "Net this month"
+      },
+      "recent_payments": {
+        "name": "Recent payments"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "large_payment": "Minimum payment amount",
+          "low_balance": "Low available balance"
+        },
+        "data_description": {
+          "large_payment": "Announce a payment only when its amount is at least this number. Leave it empty to announce every new payment.",
+          "low_balance": "Announce once when the available balance falls below this number. It can announce again after the balance rises above it. Leave it empty to turn this off."
+        },
+        "description": "These alerts are optional. The payment event is still fired for every new payment.",
+        "title": "Alerts"
+      }
+    }
+  },
+  "selector": {
+    "psu_type": {
+      "options": {
+        "business": "Business",
+        "personal": "Personal"
+      }
+    }
+  }
+}

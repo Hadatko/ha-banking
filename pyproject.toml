@@ -1,0 +1,13 @@
+[project]
+name = "airbank"
+version = "0.2.0"
+description = "Read-only Home Assistant banking integration, through email notices, Enable Banking, or the Air Bank Open API."
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2",
+    "urllib3>=2",
+    "PyJWT>=2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
