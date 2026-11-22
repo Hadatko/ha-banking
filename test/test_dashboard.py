@@ -53,6 +53,18 @@ def test_twelve_month_window_includes_the_current_month() -> None:
     assert twelve_month_days(date(2026, 1, 15)) == (date(2026, 1, 15) - date(2025, 2, 1)).days
 
 
+def test_three_accounts_share_one_row() -> None:
+    accounts = [{"name": name, "sensors": {}} for name in ("Main", "Savings", "Other")]
+    config = build_dashboard(accounts, "en", date(2026, 11, 22))
+    view = config["views"][0]
+    assert view["max_columns"] == 3
+    assert [section["cards"][0]["heading"] for section in view["sections"]] == [
+        "Main",
+        "Savings",
+        "Other",
+    ]
+
+
 def test_dashboard_without_accounts_is_an_empty_view() -> None:
     config = build_dashboard([], "en")
     assert config["views"][0]["cards"][0]["content"] == "No accounts yet."

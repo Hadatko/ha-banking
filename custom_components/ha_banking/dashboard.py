@@ -12,7 +12,7 @@ from .const import DOMAIN, Direction, SensorKey
 LOGGER = logging.getLogger(__name__)
 
 DASHBOARD_PATH = "ha-banking"
-DASHBOARD_VERSION = 8
+DASHBOARD_VERSION = 9
 THEME_NAME = "HA Banking"
 _BACKGROUND = {
     "light": "/ha_banking/background-light.jpg",
@@ -94,7 +94,7 @@ def build_dashboard(accounts: list[dict], language: str, today: date | None = No
             {
                 "title": copy["title"],
                 "type": "sections",
-                "max_columns": 2,
+                "max_columns": min(len(accounts), 4),
                 "theme": THEME_NAME,
                 "sections": [_section(account, copy, today) for account in accounts],
             }
