@@ -25,6 +25,10 @@ from .snapshot import history_start
 
 LOGGER = logging.getLogger(__name__)
 
+
+class MailboxFolderNotFound(OSError):
+    """The mailbox has no folder with this name."""
+
 _IMAP_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
 __all__ = [
@@ -107,23 +111,28 @@ def fetch_air_bank_messages(
     since = _imap_date(history_start(today))
     grouped: dict[str, list] = {}
     for parser in parsers:
+        if not parser.sender:
+            continue
         folder = bank_folders.get(parser.bank_id) or parser.default_folder
         grouped.setdefault(folder, []).append(parser)
     messages: list[MailMessage] = []
     for folder, folder_parsers in grouped.items():
-        messages.extend(
-            _fetch_folder(
-                host,
-                port,
-                username,
-                password,
-                folder,
-                folder_parsers,
-                mark_seen,
-                connect,
-                since,
+        try:
+            messages.extend(
+                _fetch_folder(
+                    host,
+                    port,
+                    username,
+                    password,
+                    folder,
+                    folder_parsers,
+                    mark_seen,
+                    connect,
+                    since,
+                )
             )
-        )
+        except MailboxFolderNotFound:
+            LOGGER.warning("Mailbox folder %s was not found, so that bank was skipped", folder)
     return messages
 
 
@@ -159,11 +168,10 @@ def _body_text(message: Message) -> str:
     for part in parts:
         if part.get_content_disposition() == "attachment" or part.is_multipart():
             continue
-        content = _part_text(part)
         if part.get_content_type() == "text/html":
-            html_parts.append(content)
-        else:
-            plain.append(content)
+            html_parts.append(_part_text(part))
+        elif part.get_content_type() == "text/plain":
+            plain.append(_part_text(part))
     if any(part.strip() for part in plain):
         return "\n".join(plain)
     return "\n".join(_html_to_text(part) for part in html_parts)
@@ -215,7 +223,7 @@ def _mailbox(
             raise EmailLoginError(reason or "Mailbox rejected the username or password") from err
         status, _ = client.select(folder, readonly=readonly)
         if status != "OK":
-            raise OSError("Mailbox folder was not found")
+            raise MailboxFolderNotFound("Mailbox folder was not found")
         yield client
     finally:
         try:

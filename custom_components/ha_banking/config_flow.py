@@ -15,9 +15,7 @@ from homeassistant.helpers import selector
 from homeassistant.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
 
 from .const import (
-    AUTH_DIRECT,
-    AUTH_EMAIL,
-    AUTH_ENABLE_BANKING,
+    AuthMethod,
     CONF_ACCOUNTS,
     CONF_APPLICATION_ID,
     CONF_ASPS_NAME,
@@ -144,7 +142,7 @@ class AirBankConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         return self.async_show_menu(
             step_id="user",
-            menu_options=[AUTH_EMAIL, AUTH_ENABLE_BANKING, AUTH_DIRECT],
+            menu_options=[AuthMethod.EMAIL, AuthMethod.ENABLE_BANKING, AuthMethod.DIRECT],
             description_placeholders={"redirect_uri": self._redirect_hint()},
         )
 
@@ -325,10 +323,10 @@ class AirBankConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
         return None
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
-        if entry_data.get(CONF_AUTH_METHOD) == AUTH_EMAIL:
+        if entry_data.get(CONF_AUTH_METHOD) == AuthMethod.EMAIL:
             self._email = dict(entry_data)
             return await self.async_step_email_reauth_confirm()
-        if entry_data.get(CONF_AUTH_METHOD) == AUTH_ENABLE_BANKING:
+        if entry_data.get(CONF_AUTH_METHOD) == AuthMethod.ENABLE_BANKING:
             self._enable = _enable_credentials(entry_data)
             return await self.async_step_enable_reauth_confirm()
         self._credentials = _direct_credentials(entry_data)
@@ -431,7 +429,7 @@ class AirBankConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
 
 def _direct_credentials(data: Mapping[str, Any]) -> dict[str, Any]:
     return {
-        CONF_AUTH_METHOD: AUTH_DIRECT,
+        CONF_AUTH_METHOD: AuthMethod.DIRECT,
         CONF_CLIENT_ID: data[CONF_CLIENT_ID],
         CONF_CLIENT_SECRET: data[CONF_CLIENT_SECRET],
         CONF_CERT: data[CONF_CERT],
@@ -442,7 +440,7 @@ def _direct_credentials(data: Mapping[str, Any]) -> dict[str, Any]:
 
 def _email_credentials(data: Mapping[str, Any]) -> dict[str, Any]:
     return {
-        CONF_AUTH_METHOD: AUTH_EMAIL,
+        CONF_AUTH_METHOD: AuthMethod.EMAIL,
         CONF_IMAP_HOST: str(data[CONF_IMAP_HOST]).strip(),
         CONF_IMAP_PORT: int(data.get(CONF_IMAP_PORT) or 993),
         CONF_IMAP_USERNAME: str(data[CONF_IMAP_USERNAME]).strip(),
@@ -460,7 +458,7 @@ def _enable_unique_id(data: Mapping[str, Any]) -> str:
 def _enable_credentials(data: Mapping[str, Any]) -> dict[str, Any]:
     country = str(data.get(CONF_COUNTRY) or "CZ").strip().upper()
     return {
-        CONF_AUTH_METHOD: AUTH_ENABLE_BANKING,
+        CONF_AUTH_METHOD: AuthMethod.ENABLE_BANKING,
         CONF_APPLICATION_ID: data[CONF_APPLICATION_ID],
         CONF_KEY: data[CONF_KEY],
         CONF_PSU_TYPE: data.get(CONF_PSU_TYPE) or "personal",

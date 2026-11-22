@@ -7,6 +7,7 @@ from datetime import date, datetime
 import re
 import unicodedata
 
+from .const import BankId, Direction
 from .snapshot import (
     AccountSnapshot,
     PaymentRecord,
@@ -38,7 +39,7 @@ class ParsedNotice:
     institution: str
     amount: float
     currency: str
-    direction: str
+    direction: Direction
     variable_symbol: str | None
     sent_at: datetime | None
     subject: str
@@ -51,7 +52,7 @@ class ParsedNotice:
 class AirBankNoticeParser:
     """Air Bank balance mail: the account number, bank code 3030, and the amount."""
 
-    bank_id = "airbank"
+    bank_id = BankId.AIRBANK
     default_folder = "airbank"
     sender = "info@airbank.cz"
     _sender = re.compile(r"(?:^|[\s<\"])info@airbank\.cz(?=$|[\s>\"])", re.IGNORECASE)
@@ -97,7 +98,7 @@ class AirBankNoticeParser:
             institution="Air Bank",
             amount=_amount(match.group(3)),
             currency="CZK",
-            direction="incoming" if match.group(2).lower() == "zvysil" else "outgoing",
+            direction=Direction.INCOMING if match.group(2).lower() == "zvysil" else Direction.OUTGOING,
             variable_symbol=symbol.group(1) if symbol else None,
             sent_at=message.sent_at,
             subject=message.subject,
@@ -107,7 +108,72 @@ class AirBankNoticeParser:
         )
 
 
-BANK_PARSERS = (AirBankNoticeParser(),)
+class CeskaSporitelnaNoticeParser:
+    """Česká spořitelna notice for a received or sent payment."""
+
+    bank_id = BankId.CSAS
+    default_folder = "sporitelna"
+    sender = "ceskasporitelna@csas.cz"
+    _sender = re.compile(
+        r"(?:^|[\s<\"])ceskasporitelna@csas\.cz(?=$|[\s>\"])",
+        re.IGNORECASE,
+    )
+    _amount = r"([0-9][0-9 .,\u00a0\u202f]*)\s*(?:kc|czk)"
+    _incoming_movement = re.compile(
+        r"na\s+ucet\s+([0-9][0-9 ]*)/([0-9]{4})\s+prave\s+dorazila\s+platba\s+ve\s+vysi\s+" + _amount,
+        re.IGNORECASE,
+    )
+    _outgoing_movement = re.compile(
+        r"z\s+uctu\s+([0-9][0-9 ]*)/([0-9]{4})\s+odesla\s+platba\s+ve\s+vysi\s+" + _amount,
+        re.IGNORECASE,
+    )
+    _available = re.compile(
+        r"na\s+uctu\s+(?:je\s+nove|zustava)\s+k\s+dispozici\s+"
+        r"([0-9][0-9 .,\u00a0\u202f]*)\s*(?:kc|czk)",
+        re.IGNORECASE,
+    )
+    _counterparty = re.compile(
+        r"cislo\s+uctu\s+protistrany:\s*([0-9][0-9 ]*)/([0-9]{4})",
+        re.IGNORECASE,
+    )
+    _recipient = re.compile(
+        r"na\s+ucet:\s*([0-9][0-9 ]*)/([0-9]{4})",
+        re.IGNORECASE,
+    )
+
+    def parse(self, message: MailMessage) -> ParsedNotice | None:
+        if self._sender.search(message.sender) is None:
+            return None
+        folded = _fold(message.body)
+        match = self._incoming_movement.search(folded)
+        direction = Direction.INCOMING
+        if match is None:
+            match = self._outgoing_movement.search(folded)
+            direction = Direction.OUTGOING
+        if match is None:
+            return None
+        account_number = "".join(match.group(1).split())
+        available = self._available.search(folded)
+        party = self._counterparty.search(folded) or self._recipient.search(folded)
+        counterparty = f"{''.join(party.group(1).split())}/{party.group(2)}" if party else None
+        return ParsedNotice(
+            account_number=account_number,
+            account_id=f"{account_number}/{match.group(2)}",
+            name=f"Česká spořitelna {account_number}",
+            institution="Česká spořitelna",
+            amount=_amount(match.group(3)),
+            currency="CZK",
+            direction=direction,
+            variable_symbol=None,
+            sent_at=message.sent_at,
+            subject=message.subject,
+            configuration_url="https://george.csas.cz/",
+            available_balance=_amount(available.group(1)) if available else None,
+            counterparty=counterparty,
+        )
+
+
+BANK_PARSERS = (AirBankNoticeParser(), CeskaSporitelnaNoticeParser())
 
 
 def parse_air_bank_notice(message: MailMessage) -> ParsedNotice | None:
@@ -186,7 +252,7 @@ def configured_bank_folders(data: dict, parsers=BANK_PARSERS) -> dict[str, str]:
 
 def imap_sender_criteria(parsers=BANK_PARSERS) -> list[str]:
     """IMAP search keys for every registered bank sender."""
-    senders = [parser.sender for parser in parsers]
+    senders = [parser.sender for parser in parsers if parser.sender]
     if not senders:
         return []
     criteria = ["FROM", senders[-1]]
@@ -213,8 +279,8 @@ def snapshots_from_messages(
 
 
 def _snapshot(notices: list[tuple[int, ParsedNotice]], today: date) -> AccountSnapshot:
-    incoming = _newest(notices, "incoming")
-    outgoing = _newest(notices, "outgoing")
+    incoming = _newest(notices, Direction.INCOMING)
+    outgoing = _newest(notices, Direction.OUTGOING)
     sample = _latest(notices)
     totals = period_totals(
         [(notice.sent_at.date() if notice.sent_at else None, notice.direction, notice.amount) for _, notice in notices],
@@ -250,7 +316,7 @@ def _latest_available_balance(notices: list[tuple[int, ParsedNotice]]) -> float 
     return _latest(reported).available_balance
 
 
-def _newest(notices: list[tuple[int, ParsedNotice]], direction: str) -> ParsedNotice | None:
+def _newest(notices: list[tuple[int, ParsedNotice]], direction: Direction) -> ParsedNotice | None:
     chosen = [item for item in notices if item[1].direction == direction]
     if not chosen:
         return None

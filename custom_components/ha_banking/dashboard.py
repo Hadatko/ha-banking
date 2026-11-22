@@ -7,7 +7,7 @@ from datetime import date
 
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
+from .const import DOMAIN, Direction, SensorKey
 
 LOGGER = logging.getLogger(__name__)
 
@@ -19,13 +19,13 @@ _BACKGROUND = {
     "dark": "/ha_banking/background-dark.jpg",
 }
 _GRAPH_KEYS = (
-    "available_balance",
-    "month_incoming",
-    "month_outgoing",
-    "month_net",
-    "year_incoming",
-    "year_outgoing",
-    "year_net",
+    SensorKey.AVAILABLE_BALANCE,
+    SensorKey.MONTH_INCOMING,
+    SensorKey.MONTH_OUTGOING,
+    SensorKey.MONTH_NET,
+    SensorKey.YEAR_INCOMING,
+    SensorKey.YEAR_OUTGOING,
+    SensorKey.YEAR_NET,
 )
 _COPY = {
     "en": {
@@ -33,8 +33,8 @@ _COPY = {
         "empty": "No accounts yet.",
         "payments": "Payments",
         "none": "No payments yet.",
-        "incoming": "Incoming",
-        "outgoing": "Outgoing",
+        Direction.INCOMING: "Incoming",
+        Direction.OUTGOING: "Outgoing",
         "balance": "Available balance",
         "balance_line": "Available balance over time",
         "month": "Last 12 months",
@@ -45,8 +45,8 @@ _COPY = {
         "empty": "Zatiaľ žiadne účty.",
         "payments": "Platby",
         "none": "Zatiaľ žiadne platby.",
-        "incoming": "Príchod",
-        "outgoing": "Odchod",
+        Direction.INCOMING: "Príchod",
+        Direction.OUTGOING: "Odchod",
         "balance": "Dostupný zostatok",
         "balance_line": "Dostupný zostatok v čase",
         "month": "Posledných 12 mesiacov",
@@ -57,8 +57,8 @@ _COPY = {
         "empty": "Zatím žádné účty.",
         "payments": "Platby",
         "none": "Zatím žádné platby.",
-        "incoming": "Příjem",
-        "outgoing": "Výdaj",
+        Direction.INCOMING: "Příjem",
+        Direction.OUTGOING: "Výdaj",
         "balance": "Dostupný zůstatek",
         "balance_line": "Dostupný zůstatek v čase",
         "month": "Posledních 12 měsíců",
@@ -105,22 +105,34 @@ def build_dashboard(accounts: list[dict], language: str, today: date | None = No
 def _section(account: dict, copy: dict, today: date) -> dict:
     sensors = account["sensors"]
     cards: list[dict] = [{"type": "heading", "heading": account["name"]}]
-    latest = [sensors[key] for key in ("incoming_payment", "outgoing_payment") if sensors.get(key)]
+    latest = [
+        sensors[key]
+        for key in (SensorKey.INCOMING_PAYMENT, SensorKey.OUTGOING_PAYMENT)
+        if sensors.get(key)
+    ]
     if latest:
         cards.append({"type": "entities", "entities": latest, "title": copy["payments"]})
-    recent = sensors.get("recent_payments")
+    recent = sensors.get(SensorKey.RECENT_PAYMENTS)
     if recent:
         cards.append({"type": "markdown", "content": _payment_markdown(recent, copy)})
-    available = sensors.get("available_balance")
+    available = sensors.get(SensorKey.AVAILABLE_BALANCE)
     if available:
         cards.append(
             _bars([available], copy["balance_line"], days=366, period="day", chart_type="line")
         )
         cards.append(_bars([available], copy["balance"], days=30, period="day"))
-    month = [sensors[key] for key in ("month_incoming", "month_outgoing", "month_net") if sensors.get(key)]
+    month = [
+        sensors[key]
+        for key in (SensorKey.MONTH_INCOMING, SensorKey.MONTH_OUTGOING, SensorKey.MONTH_NET)
+        if sensors.get(key)
+    ]
     if month:
         cards.append(_bars(month, copy["month"], days=twelve_month_days(today), period="month"))
-    year = [sensors[key] for key in ("year_incoming", "year_outgoing", "year_net") if sensors.get(key)]
+    year = [
+        sensors[key]
+        for key in (SensorKey.YEAR_INCOMING, SensorKey.YEAR_OUTGOING, SensorKey.YEAR_NET)
+        if sensors.get(key)
+    ]
     if year:
         cards.append(_bars(year, copy["year"], days=366, period="month"))
     return {"type": "grid", "cards": cards}
@@ -146,7 +158,7 @@ def _payment_markdown(entity_id: str, copy: dict) -> str:
         f"{copy['none']}\n"
         "{% else %}\n"
         "{% for row in rows[:20] %}\n"
-        "- {{ row.booked or '' }} **{% if row.direction == 'incoming' %}"
+        "- {{ row.booked or '' }} **{% if row.direction == '" + Direction.INCOMING + "' %}"
         f"{copy['incoming']}"
         "{% else %}"
         f"{copy['outgoing']}"

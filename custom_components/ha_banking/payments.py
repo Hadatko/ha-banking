@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from hashlib import sha256
 
-from .const import DOMAIN
+from .const import DOMAIN, Direction
 from .snapshot import AccountSnapshot, PaymentRecord
 
 EVENT_PAYMENT = "ha_banking_payment"
@@ -12,22 +12,22 @@ EVENT_PAYMENT = "ha_banking_payment"
 _COPY = {
     "en": {
         "title": "New bank payment",
-        "incoming": "Incoming",
-        "outgoing": "Outgoing",
+        Direction.INCOMING: "Incoming",
+        Direction.OUTGOING: "Outgoing",
         "low_title": "Low available balance",
         "low": "available balance is",
     },
     "sk": {
         "title": "Nová platba",
-        "incoming": "Príchod",
-        "outgoing": "Odchod",
+        Direction.INCOMING: "Príchod",
+        Direction.OUTGOING: "Odchod",
         "low_title": "Nízky dostupný zostatok",
         "low": "dostupný zostatok je",
     },
     "cs": {
         "title": "Nová platba",
-        "incoming": "Příjem",
-        "outgoing": "Výdaj",
+        Direction.INCOMING: "Příjem",
+        Direction.OUTGOING: "Výdaj",
         "low_title": "Nízký dostupný zůstatek",
         "low": "dostupný zůstatek je",
     },

@@ -43,13 +43,15 @@ The Air Bank certificate is untested because the Open API requires an account-in
  A mapped number is shown under that name. An unmapped number stays `Air Bank` plus the number.
 4. **Mark notices as read** is on. Home Assistant marks a message read only after the payment was imported. A message it could not parse stays unread. Turn the option off to leave every message unread. Gmail does not delete a message because it was marked read.
 
-A Gmail filter can apply a label when the message arrives. For Air Bank, use From `info@airbank.cz` and subject `zůstatku`, then choose Skip Inbox and apply the label `airbank`. In Gmail settings, show that label in IMAP. The Air Bank folder in Home Assistant must be the same name. Another bank can use a different label and a different folder.
+A Gmail filter can apply a label when the message arrives. For Air Bank, use From `info@airbank.cz` and subject `zůstatku`, then choose Skip Inbox and apply the label `airbank`. For Česká spořitelna, use From `ceskasporitelna@csas.cz` and the label `sporitelna`. In Gmail settings, show that label in IMAP. The folder in Home Assistant must be the same name. Another bank can use a different label and a different folder.
 
 Home Assistant reads the mailbox as soon as the integration is added, and again every 15 minutes. Reloading the integration starts another read immediately. There is no separate button that checks the mailbox sooner.
 
 Each read covers the registered bank senders in that folder back to 1 January of the current year, and at least 90 days. It reads that whole window again, so a notice is not added twice and a late notice still joins the month or year of its date. A notice that arrives just after a read waits for the next one, at most 15 minutes.
 
-Air Bank is the first parser. Another bank is another parser beside it, with its own sender and its own account identity. A password-protected account statement is ignored. The newest notice sets the available balance from the sentence `Dostupný zůstatek k … je …`. The booked balance is not in the mail, so that sensor stays empty. The account name in front of the account number becomes the device name, unless the account-name list gives that number its own name. Notices are summed for the current year and the current month, each as incoming, outgoing, and net. A notice without a date is left out of those sums.
+Air Bank is the first parser. Another bank is another parser beside it, with its own sender and its own account identity. A password-protected account statement is ignored. The newest Air Bank notice sets the available balance from the sentence `Dostupný zůstatek k … je …`. The booked balance is not in the mail, so that sensor stays empty. The account name in front of the account number becomes the device name, unless the account-name list gives that number its own name. Notices are summed for the current year and the current month, each as incoming, outgoing, and net. A notice without a date is left out of those sums.
+
+Česká spořitelna reads payment notices from `ceskasporitelna@csas.cz` in the folder `sporitelna`. A received payment says `na účet … právě dorazila platba ve výši …` and `Na účtu je nově k dispozici …`. A sent payment says `z účtu … odešla platba ve výši …` and `Na účtu zůstává k dispozici …`. The booked balance is not in that mail. The other account number is kept as the counterparty. A mailbox that has no `sporitelna` folder still reads Air Bank.
 
 ### Enable Banking
 
