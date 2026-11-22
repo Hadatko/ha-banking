@@ -16,9 +16,9 @@ Setup offers three sign-in methods:
 
 - **Email notices.** Home Assistant reads Air Bank, Česká spořitelna, and mBank notices from your own mailbox. This does not require an account-information licence. Air Bank and Česká spořitelna notices include the available balance. The booked balance is not in those mails.
 - **Enable Banking.** Each Home Assistant user registers their own Enable Banking application and connects only their own accounts. Enable Banking does not provide this service to a private person residing in the Czech Republic. Untested against the live service.
-- **Bank API.** The next step asks which bank. Air Bank uses a licensed certificate. Česká spořitelna uses the free Premium Accounts API for a personal account: the user creates an application on the Erste developer portal and signs in at George. Production access has to be approved by the bank. The sandbox uses the bank's test accounts. Untested against a live account.
+- **Bank API.** The next step asks which bank. Air Bank uses a licensed certificate. Česká spořitelna uses the free Premium Accounts API for a personal account: the user creates an application on the Erste developer portal and signs in at George. Fio uses a free watch-only token from its internet banking. Production access for Česká spořitelna has to be approved by the bank. The Česká spořitelna sandbox uses the bank's test accounts. Untested against a live account.
 
-Enable Banking, the Air Bank certificate, and the Česká spořitelna API have automated tests with stand-in HTTP replies. None of them has been confirmed with a real account.
+Enable Banking, the Air Bank certificate, the Česká spořitelna API, and the Fio API have automated tests with stand-in HTTP replies. None of them has been confirmed with a real account.
 
 Enable Banking is untested because the service does not accept a private person who lives in the Czech Republic. The country list, the bank choice, and the sign-in redirect were never completed on the live site.
 
@@ -34,6 +34,16 @@ The Česká spořitelna API is untested against a live account because productio
 4. Sign in at George when Home Assistant opens the bank page.
 
 The integration reads payment accounts, booked and available balances, and transactions. It does not read mortgages, and it does not send payments. Email notices for Česká spořitelna stay available as a separate sign-in method.
+
+### Fio API
+
+1. In Fio internet banking, open Nastavení, then API.
+2. Create a token with Sledování účtu only. Do not enable payment entry. One token belongs to one account. It starts working five minutes after authorization and lasts 180 days unless automatic extension is turned on.
+3. In Home Assistant, choose Bank API, then Fio banka, and paste the token.
+
+Home Assistant reads movements and the closing balance. Fio publishes no separate available balance. Without an extra unlock in internet banking, movements older than 90 days are not returned, so a yearly sum later in the year covers only that window. The integration does not submit payments. Another Fio account needs its own token and a second setup.
+
+MONETA and CREDITAS also offer a free token, but MONETA publishes the request address only after a developer-portal registration and CREDITAS limits keys to partner or licensed applications. Komerční banka does not offer this API to a natural person who is not in business. ČSOB and Raiffeisenbank require a certificate. No public personal read API of this kind was found for mBank, UniCredit, Trinity Bank, Partners Banka, or Max banka. Air Bank stays on the licensed certificate.
 
 ## Requirements
 

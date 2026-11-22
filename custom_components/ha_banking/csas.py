@@ -49,7 +49,7 @@ def sign_in_menu() -> tuple[AuthMethod, ...]:
 
 def bank_api_menu() -> tuple[AuthMethod, ...]:
     """Banks reached through their own API."""
-    return (AuthMethod.DIRECT, AuthMethod.CSAS)
+    return (AuthMethod.DIRECT, AuthMethod.CSAS, AuthMethod.FIO)
 
 
 def authorization_url(*, sandbox: bool, client_id: str, redirect_uri: str, state: str) -> str:

@@ -30,7 +30,12 @@ type AirBankConfigEntry = ConfigEntry[AirBankCoordinator]
 
 async def async_setup_entry(hass: HomeAssistant, entry: AirBankConfigEntry) -> bool:
     """Set up account polling for one Air Bank login."""
-    if entry.data.get(CONF_AUTH_METHOD) in {AuthMethod.ENABLE_BANKING, AuthMethod.EMAIL, AuthMethod.CSAS}:
+    if entry.data.get(CONF_AUTH_METHOD) in {
+        AuthMethod.ENABLE_BANKING,
+        AuthMethod.EMAIL,
+        AuthMethod.CSAS,
+        AuthMethod.FIO,
+    }:
         coordinator = AirBankCoordinator(hass, entry, None)
     else:
         implementation = implementation_from_entry(hass, entry)

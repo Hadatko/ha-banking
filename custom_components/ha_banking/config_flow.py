@@ -22,6 +22,7 @@ from .const import (
     CONF_AUTH_METHOD,
     CONF_COUNTRY,
     CONF_CERT,
+    CONF_FIO_TOKEN,
     CONF_BANK_FOLDERS,
     CONF_IMAP_HOST,
     CONF_ACCOUNT_NAMES,
@@ -51,6 +52,7 @@ from .csas import (
     bank_api_menu,
     sign_in_menu,
 )
+from .fio import Fio, FioError, collect_fio_snapshots, fio_unique_id
 from .lib.enable_banking import (
     EnableBanking,
     EnableBankingError,
@@ -73,6 +75,14 @@ CSAS_SCHEMA = vol.Schema(
             selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
         ),
         vol.Required(CONF_SANDBOX, default=True): bool,
+    }
+)
+
+FIO_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_FIO_TOKEN): selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+        ),
     }
 )
 
@@ -175,12 +185,44 @@ class AirBankConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
         )
 
     async def async_step_bank_api(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Choose Air Bank or Česká spořitelna after the user picks a bank API."""
+        """Choose a bank after the user picks a bank API."""
         return self.async_show_menu(
             step_id="bank_api",
             menu_options=list(bank_api_menu()),
             description_placeholders={"redirect_uri": self._redirect_hint()},
         )
+
+    async def async_step_fio(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Read one Fio account with the holder's own watch token."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            token = str(user_input[CONF_FIO_TOKEN]).strip()
+            try:
+                snapshots = await self.hass.async_add_executor_job(
+                    collect_fio_snapshots, Fio(), token, None
+                )
+            except FioError as err:
+                LOGGER.debug("Fio token check failed with status %s", err.status)
+                errors["base"] = _fio_form_error(err)
+            except OSError:
+                errors["base"] = "fio_unavailable"
+            else:
+                account_id = fio_unique_id(snapshots[0].account_id)
+                if self.source == SOURCE_REAUTH:
+                    current = self._get_reauth_entry()
+                    if current.unique_id != account_id:
+                        return self.async_abort(reason="fio_account_mismatch")
+                    return self.async_update_reload_and_abort(
+                        current,
+                        data_updates={CONF_FIO_TOKEN: token},
+                    )
+                await self.async_set_unique_id(account_id)
+                self._abort_if_unique_id_configured()
+                return await self._async_create(
+                    title="Fio banka",
+                    data={CONF_AUTH_METHOD: AuthMethod.FIO, CONF_FIO_TOKEN: token},
+                )
+        return self.async_show_form(step_id="fio", data_schema=FIO_SCHEMA, errors=errors)
 
     async def async_step_direct(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
@@ -437,6 +479,8 @@ class AirBankConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
         if entry_data.get(CONF_AUTH_METHOD) == AuthMethod.CSAS:
             self._csas = _csas_credentials(entry_data)
             return await self.async_step_csas_reauth_confirm()
+        if entry_data.get(CONF_AUTH_METHOD) == AuthMethod.FIO:
+            return await self.async_step_fio()
         self._credentials = _direct_credentials(entry_data)
         return await self.async_step_reauth_confirm()
 
@@ -578,6 +622,14 @@ def _email_credentials(data: Mapping[str, Any]) -> dict[str, Any]:
         CONF_ACCOUNT_NAMES: parse_account_names(data.get(CONF_ACCOUNT_NAMES) or ""),
         CONF_MARK_SEEN: bool(data.get(CONF_MARK_SEEN, True)),
     }
+
+
+def _fio_form_error(err: FioError) -> str:
+    if err.status == 500:
+        return "fio_rejected"
+    if err.status == 409:
+        return "fio_busy"
+    return "fio_unavailable"
 
 
 def _csas_unique_id(data: Mapping[str, Any]) -> str:

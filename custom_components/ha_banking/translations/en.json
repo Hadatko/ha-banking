@@ -9,7 +9,8 @@
       "oauth_timeout": "Timeout while finishing the Air Bank login.",
       "oauth_unauthorized": "Air Bank did not authorize this application.",
       "reauth_successful": "Air Bank login was updated.",
-      "user_rejected_authorize": "The Air Bank login was cancelled."
+      "user_rejected_authorize": "The Air Bank login was cancelled.",
+      "fio_account_mismatch": "This token belongs to a different Fio account."
     },
     "error": {
       "bank_unavailable": "Enable Banking returned no bank for this country.",
@@ -18,7 +19,10 @@
       "imap_failed": "Home Assistant could not open this mailbox.",
       "invalid_auth": "The mailbox rejected this username or password. {reason}",
       "invalid_cert": "The certificate or private key file was not found.",
-      "invalid_key": "The Enable Banking private key file was not found or cannot sign requests."
+      "invalid_key": "The Enable Banking private key file was not found or cannot sign requests.",
+      "fio_rejected": "Fio rejected this token. Check that it is active and that five minutes have passed since you authorized it.",
+      "fio_busy": "Fio allows one request for this token every 30 seconds. Wait and try again.",
+      "fio_unavailable": "Home Assistant could not read this Fio account."
     },
     "step": {
       "direct": {
@@ -119,7 +123,7 @@
         "title": "Reconnect Air Bank"
       },
       "user": {
-        "description": "Choose email notices, Enable Banking, or a bank's own API. Under the bank API, Air Bank uses a licensed certificate and Česká spořitelna uses an application from the Erste developer portal. Payments cannot be sent from Home Assistant.",
+        "description": "Choose email notices, Enable Banking, or a bank's own API. Under the bank API, Air Bank uses a licensed certificate, Česká spořitelna uses an application from the Erste developer portal, and Fio uses a watch-only token from its internet banking. Payments cannot be sent from Home Assistant.",
         "menu_options": {
           "bank_api": "Bank API",
           "email": "Email notices",
@@ -129,10 +133,11 @@
         "title": "Connect a bank"
       },
       "bank_api": {
-        "description": "Choose the bank. Each bank uses its own application, stored only on this Home Assistant. Payments cannot be sent from Home Assistant.",
+        "description": "Choose the bank. Each bank uses its own application or token, stored only on this Home Assistant. Payments cannot be sent from Home Assistant.",
         "menu_options": {
           "csas": "Česká spořitelna",
-          "direct": "Air Bank certificate"
+          "direct": "Air Bank certificate",
+          "fio": "Fio banka"
         },
         "title": "Bank API"
       },
@@ -159,6 +164,16 @@
       "csas_reauth_confirm": {
         "description": "Sign in again at George. The application redirect URI must be {redirect_uri}.",
         "title": "Reconnect Česká spořitelna"
+      },
+      "fio": {
+        "data": {
+          "fio_token": "API token"
+        },
+        "data_description": {
+          "fio_token": "Watch-only token from Fio internet banking. Stored on this Home Assistant host."
+        },
+        "description": "In Fio internet banking open Settings, then API. Create a token with account watching only, not payment entry. The token belongs to one account and starts working five minutes after you authorize it. Home Assistant reads movements and the closing balance for at most the last 90 days. It does not send payments.",
+        "title": "Fio banka"
       },
       "dashboard": {
         "title": "Dashboard look",

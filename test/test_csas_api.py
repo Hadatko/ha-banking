@@ -30,7 +30,7 @@ class FakeTransport:
 
 def test_sign_in_menu_keeps_three_methods_and_bank_api_offers_both_banks() -> None:
     assert sign_in_menu() == (AuthMethod.EMAIL, AuthMethod.ENABLE_BANKING, AuthMethod.BANK_API)
-    assert bank_api_menu() == (AuthMethod.DIRECT, AuthMethod.CSAS)
+    assert bank_api_menu() == (AuthMethod.DIRECT, AuthMethod.CSAS, AuthMethod.FIO)
 
 
 def test_authorization_url_asks_only_for_account_access() -> None:
