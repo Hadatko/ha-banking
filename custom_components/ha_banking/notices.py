@@ -321,15 +321,18 @@ def snapshots_from_messages(
     today: date | None = None,
 ) -> list[AccountSnapshot]:
     """Keep the newest payment in each direction and sum notices from the current month."""
+    notices = [notice for message in messages for notice in parse_notices(message, parsers)]
+    return snapshots_from_notices(notices, today)
+
+
+def snapshots_from_notices(notices: list[ParsedNotice], today: date | None = None) -> list[AccountSnapshot]:
+    """One snapshot per account from notices already parsed, in mailbox order."""
     if today is None:
         today = date.today()
     grouped: dict[str, list[tuple[int, ParsedNotice]]] = {}
-    order = 0
-    for message in messages:
-        for notice in parse_notices(message, parsers):
-            grouped.setdefault(notice.account_id, []).append((order, notice))
-            order += 1
-    return [_snapshot(notices, today) for notices in grouped.values()]
+    for order, notice in enumerate(notices):
+        grouped.setdefault(notice.account_id, []).append((order, notice))
+    return [_snapshot(items, today) for items in grouped.values()]
 
 
 def _snapshot(notices: list[tuple[int, ParsedNotice]], today: date) -> AccountSnapshot:
@@ -339,6 +342,11 @@ def _snapshot(notices: list[tuple[int, ParsedNotice]], today: date) -> AccountSn
     totals = period_totals(
         [(notice.sent_at.date() if notice.sent_at else None, notice.direction, notice.amount) for _, notice in notices],
         today,
+        [
+            (notice.sent_at, notice.available_balance)
+            for _, notice in notices
+            if notice.sent_at is not None and notice.available_balance is not None
+        ],
     )
     return AccountSnapshot(
         account_id=sample.account_id,

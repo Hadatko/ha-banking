@@ -49,8 +49,9 @@ from .lib.enable_banking import (
 )
 from .lib.errors import AirBankApiError
 from .lib.models import ClientConfig
-from .mail import EmailLoginError, fetch_air_bank_messages, snapshots_from_messages
-from .notices import apply_account_names, configured_bank_folders
+from .mail import EmailLoginError, MailboxCache, fetch_notices
+from .mailbox_store import MailboxStore, mailbox_key
+from .notices import apply_account_names, configured_bank_folders, snapshots_from_notices
 from .snapshot import AccountSnapshot, collect_account_snapshots
 
 LOGGER = logging.getLogger(__name__)
@@ -71,6 +72,24 @@ class AirBankCoordinator(DataUpdateCoordinator[list[AccountSnapshot]]):
         )
         self.entry = entry
         self.session = session
+        self.mailbox_cache = MailboxCache()
+        self.mailbox_store: MailboxStore | None = None
+        if entry.data.get(CONF_AUTH_METHOD) == AuthMethod.EMAIL:
+            self.mailbox_store = MailboxStore(
+                hass,
+                entry.entry_id,
+                mailbox_key(str(entry.data[CONF_IMAP_HOST]), str(entry.data[CONF_IMAP_USERNAME])),
+            )
+
+    async def async_load_mailbox_cache(self) -> list[AccountSnapshot] | None:
+        """Snapshots from the stored mailbox cache, without reading the mailbox."""
+        if self.mailbox_store is None:
+            return None
+        cache = await self.mailbox_store.async_load()
+        if cache is None or not cache.folders:
+            return None
+        self.mailbox_cache = cache
+        return self._email_snapshots(cache.notices())
 
     async def _async_update_data(self) -> list[AccountSnapshot]:
         method = self.entry.data.get(CONF_AUTH_METHOD)
@@ -125,7 +144,11 @@ class AirBankCoordinator(DataUpdateCoordinator[list[AccountSnapshot]]):
 
     async def _async_update_email(self) -> list[AccountSnapshot]:
         try:
-            return await self.hass.async_add_executor_job(self._collect_email)
+            snapshots = await self.hass.async_add_executor_job(self._collect_email)
+            if self.mailbox_cache.changed and self.mailbox_store is not None:
+                self.mailbox_store.schedule_save(self.mailbox_cache)
+                self.mailbox_cache.changed = False
+            return snapshots
         except EmailLoginError as err:
             raise ConfigEntryAuthFailed("Air Bank mailbox login failed") from err
         except OSError as err:
@@ -134,17 +157,21 @@ class AirBankCoordinator(DataUpdateCoordinator[list[AccountSnapshot]]):
     def _collect_email(self) -> list[AccountSnapshot]:
         data: dict[str, Any] = self.entry.data
         today = dt_util.now().date()
-        messages = fetch_air_bank_messages(
+        notices = fetch_notices(
             data[CONF_IMAP_HOST],
             int(data.get(CONF_IMAP_PORT) or 993),
             data[CONF_IMAP_USERNAME],
             data[CONF_IMAP_PASSWORD],
             configured_bank_folders(data),
+            self.mailbox_cache,
             mark_seen=bool(data.get(CONF_MARK_SEEN, True)),
             today=today,
         )
-        snapshots = snapshots_from_messages(messages, today=today)
-        return apply_account_names(snapshots, data.get(CONF_ACCOUNT_NAMES) or {})
+        return self._email_snapshots(notices)
+
+    def _email_snapshots(self, notices: list) -> list[AccountSnapshot]:
+        snapshots = snapshots_from_notices(notices, today=dt_util.now().date())
+        return apply_account_names(snapshots, self.entry.data.get(CONF_ACCOUNT_NAMES) or {})
 
     async def _async_update_csas(self) -> list[AccountSnapshot]:
         data: dict[str, Any] = self.entry.data

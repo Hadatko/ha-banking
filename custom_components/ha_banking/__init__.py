@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.config_entry_oauth2_flow import OAuth2Session
 
 from .config_flow import AirBankConfigFlow, implementation_from_entry
-from .const import AuthMethod, CONF_AUTH_METHOD, CONF_LARGE_PAYMENT, CONF_LOW_BALANCE
+from .const import AuthMethod, CONF_AUTH_METHOD, CONF_IMAP_HOST, CONF_IMAP_USERNAME, CONF_LARGE_PAYMENT, CONF_LOW_BALANCE
 from .coordinator import AirBankCoordinator
 from .dashboard import async_publish_graph_statistics, async_setup_dashboard
 from .payments import (
@@ -40,7 +40,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirBankConfigEntry) -> b
         AirBankConfigFlow.async_register_implementation(hass, implementation)
         session = OAuth2Session(hass, entry, implementation)
         coordinator = AirBankCoordinator(hass, entry, session)
-    await coordinator.async_config_entry_first_refresh()
+    cached = await coordinator.async_load_mailbox_cache()
+    if cached:
+        # Show the stored mailbox at once; the mailbox is checked for new mail in the background.
+        coordinator.async_set_updated_data(cached)
+    else:
+        await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
     seed_payments(known_payments(hass), coordinator.data or [])
 
@@ -61,7 +66,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirBankConfigEntry) -> b
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_setup_dashboard(hass)
     async_publish_graph_statistics(hass, coordinator.data or [])
+    if cached:
+        entry.async_create_background_task(hass, coordinator.async_refresh(), f"{entry.entry_id} mailbox sync")
     return True
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: AirBankConfigEntry) -> None:
+    """Delete the stored mailbox cache of a removed entry."""
+    if entry.data.get(CONF_AUTH_METHOD) == AuthMethod.EMAIL:
+        from .mailbox_store import MailboxStore, mailbox_key
+
+        await MailboxStore(
+            hass, entry.entry_id, mailbox_key(str(entry.data.get(CONF_IMAP_HOST, "")), str(entry.data.get(CONF_IMAP_USERNAME, "")))
+        ).async_remove()
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: AirBankConfigEntry) -> bool:
