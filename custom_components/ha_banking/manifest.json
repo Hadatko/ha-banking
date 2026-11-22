@@ -1,6 +1,7 @@
 {
   "domain": "ha_banking",
   "name": "HA Banking",
+  "after_dependencies": ["http", "recorder"],
   "codeowners": ["@Hadatko"],
   "config_flow": true,
   "dependencies": ["frontend", "lovelace", "persistent_notification"],
@@ -8,6 +9,6 @@
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Hadatko/ha-banking/issues",
-  "requirements": ["pydantic>=2", "urllib3>=2", "PyJWT>=2"],
+  "requirements": ["pydantic>=2"],
   "version": "1.0.0"
 }
