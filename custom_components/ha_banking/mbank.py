@@ -20,7 +20,7 @@ _AMOUNT = r"-?\d[\d  .]*,\d{2}"
 _CURRENCY = r"[A-Z]{3}"
 
 _REPORT_DATE = re.compile(r"notifikace\s+ze\s+dne:\s*(\d{1,2})\.(\d{1,2})\.(\d{4})", re.IGNORECASE)
-_MOVED = re.compile(rf"(?:castka:?|odeslo:)\s*({_AMOUNT})\s*({_CURRENCY})", re.IGNORECASE)
+_MOVED = re.compile(rf"(?:castka:?|odeslo:|prislo:)\s*({_AMOUNT})\s*({_CURRENCY})", re.IGNORECASE)
 _AVAILABLE = re.compile(rf"(?:Dostup\.zust|dispo):\s*({_AMOUNT})\s*{_CURRENCY}", re.IGNORECASE)
 _OWN_FUNDS = re.compile(rf"Vlast\.prostr:\s*({_AMOUNT})\s*{_CURRENCY}", re.IGNORECASE)
 _OWN_ACCOUNT = re.compile(r"(?<![.\d/])(\d{6,})(?![\d/,.])")
@@ -122,7 +122,7 @@ def parse_row(text: str, occurred_at: datetime, row: int = 0) -> Movement | None
     moved = _MOVED.search(body)
     if moved is None:
         return None
-    if body.startswith("Prich"):
+    if body.startswith(("Prich", "Na Vas ucet")):
         direction = "incoming"
     elif body.startswith(("Z Vaseho uc", "Odch")):
         direction = "outgoing"
@@ -134,7 +134,7 @@ def parse_row(text: str, occurred_at: datetime, row: int = 0) -> Movement | None
 
     counterparty = None
     note = None
-    if body.startswith("Z Vaseho uc"):
+    if body.startswith(("Z Vaseho uc", "Na Vas ucet")):
         kind = "card"
         counterparty = _group(_CARD_MERCHANT.search(body))
     elif "okamzita" in body:

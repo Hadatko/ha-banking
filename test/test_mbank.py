@@ -95,6 +95,15 @@ def test_instant_rows() -> None:
     assert incoming.counterparty_account == "...33333/0600"
 
 
+def test_card_refund_row() -> None:
+    m = parse_row(
+        "mBank: Na Vas ucet 12345678 prislo: 665,00 CZK AV: Alza.cz /Prague; Dostup.zust: 35529,28 CZK; Vlast.prostr: 30529,28 CZK.",
+        AT,
+    )
+    assert (m.account_number, m.direction, m.kind, m.amount) == ("12345678", "incoming", "card", 665.0)
+    assert (m.counterparty, m.available_balance, m.own_funds) == ("Alza.cz /Prague", 35529.28, 30529.28)
+
+
 def test_direct_debit_and_transfer_note() -> None:
     debit = parse_row(ROWS_19[1][1], AT)
     assert (debit.direction, debit.kind, debit.amount, debit.available_balance) == ("outgoing", "direct_debit", 337.0, 15640.88)
