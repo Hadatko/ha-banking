@@ -14,8 +14,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    AUTH_EMAIL,
-    AUTH_ENABLE_BANKING,
+    AuthMethod,
     CONF_ACCOUNTS,
     CONF_APPLICATION_ID,
     CONF_ASPS_NAME,
@@ -68,9 +67,9 @@ class AirBankCoordinator(DataUpdateCoordinator[list[AccountSnapshot]]):
 
     async def _async_update_data(self) -> list[AccountSnapshot]:
         method = self.entry.data.get(CONF_AUTH_METHOD)
-        if method == AUTH_ENABLE_BANKING:
+        if method == AuthMethod.ENABLE_BANKING:
             return await self._async_update_enable_banking()
-        if method == AUTH_EMAIL:
+        if method == AuthMethod.EMAIL:
             return await self._async_update_email()
         if self.session is None:
             raise ConfigEntryAuthFailed("Air Bank login is missing")

@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.config_entry_oauth2_flow import OAuth2Session
 
 from .config_flow import AirBankConfigFlow, implementation_from_entry
-from .const import AUTH_EMAIL, AUTH_ENABLE_BANKING, CONF_AUTH_METHOD, CONF_LARGE_PAYMENT, CONF_LOW_BALANCE
+from .const import AuthMethod, CONF_AUTH_METHOD, CONF_LARGE_PAYMENT, CONF_LOW_BALANCE
 from .coordinator import AirBankCoordinator
 from .dashboard import async_publish_graph_statistics, async_setup_dashboard
 from .payments import (
@@ -28,7 +28,7 @@ type AirBankConfigEntry = ConfigEntry[AirBankCoordinator]
 
 async def async_setup_entry(hass: HomeAssistant, entry: AirBankConfigEntry) -> bool:
     """Set up account polling for one Air Bank login."""
-    if entry.data.get(CONF_AUTH_METHOD) in {AUTH_ENABLE_BANKING, AUTH_EMAIL}:
+    if entry.data.get(CONF_AUTH_METHOD) in {AuthMethod.ENABLE_BANKING, AuthMethod.EMAIL}:
         coordinator = AirBankCoordinator(hass, entry, None)
     else:
         implementation = implementation_from_entry(hass, entry)

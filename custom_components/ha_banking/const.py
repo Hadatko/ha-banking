@@ -1,6 +1,7 @@
 """Constants for the Air Bank integration."""
 
 from datetime import timedelta
+from enum import StrEnum
 
 DOMAIN = "ha_banking"
 CONF_CLIENT_ID = "client_id"
@@ -16,9 +17,74 @@ CONF_ASPS_NAME = "aspsp_name"
 CONF_SESSION_ID = "session_id"
 CONF_ACCOUNTS = "accounts"
 CONF_VALID_UNTIL = "session_valid_until"
-AUTH_DIRECT = "direct"
-AUTH_ENABLE_BANKING = "enable_banking"
-AUTH_EMAIL = "email"
+
+
+class AuthMethod(StrEnum):
+    """How one config entry reads the bank."""
+
+    DIRECT = "direct"
+    ENABLE_BANKING = "enable_banking"
+    EMAIL = "email"
+
+
+class Direction(StrEnum):
+    """Which way money moved."""
+
+    INCOMING = "incoming"
+    OUTGOING = "outgoing"
+
+
+class CreditDebit(StrEnum):
+    """ISO credit and debit indicator used by the bank APIs."""
+
+    CREDIT = "CRDT"
+    DEBIT = "DBIT"
+
+
+class BalanceType(StrEnum):
+    """ISO balance type codes used by the bank APIs."""
+
+    CLBD = "CLBD"
+    ITBD = "ITBD"
+    PRCD = "PRCD"
+    CLAV = "CLAV"
+    ITAV = "ITAV"
+    XPCD = "XPCD"
+    FWAV = "FWAV"
+
+
+class BankId(StrEnum):
+    """A mailbox bank the email parser knows."""
+
+    AIRBANK = "airbank"
+    CSAS = "csas"
+    MBANK = "mbank"
+
+
+class SensorKey(StrEnum):
+    """Sensor and translation key for one account value."""
+
+    BOOKED_BALANCE = "booked_balance"
+    AVAILABLE_BALANCE = "available_balance"
+    INCOMING_PAYMENT = "incoming_payment"
+    OUTGOING_PAYMENT = "outgoing_payment"
+    TRANSACTION_STATUS = "transaction_status"
+    YEAR_INCOMING = "year_incoming"
+    YEAR_OUTGOING = "year_outgoing"
+    YEAR_NET = "year_net"
+    MONTH_INCOMING = "month_incoming"
+    MONTH_OUTGOING = "month_outgoing"
+    MONTH_NET = "month_net"
+    RECENT_PAYMENTS = "recent_payments"
+
+
+def direction_from_indicator(indicator: object) -> Direction | None:
+    """Map a bank credit or debit code to a payment direction."""
+    if indicator == CreditDebit.CREDIT:
+        return Direction.INCOMING
+    if indicator == CreditDebit.DEBIT:
+        return Direction.OUTGOING
+    return None
 CONF_IMAP_HOST = "imap_host"
 CONF_IMAP_PORT = "imap_port"
 CONF_IMAP_USERNAME = "imap_username"
@@ -30,18 +96,5 @@ CONF_ACCOUNT_NAMES = "account_names"
 CONF_LARGE_PAYMENT = "large_payment"
 CONF_LOW_BALANCE = "low_balance"
 SCAN_INTERVAL = timedelta(minutes=15)
-
-SENSOR_KEYS = (
-    "booked_balance",
-    "available_balance",
-    "incoming_payment",
-    "outgoing_payment",
-    "transaction_status",
-    "year_incoming",
-    "year_outgoing",
-    "year_net",
-    "month_incoming",
-    "month_outgoing",
-    "month_net",
-    "recent_payments",
-)
+BOOKED_BALANCE_TYPES = (BalanceType.CLBD, BalanceType.ITBD, BalanceType.PRCD)
+AVAILABLE_BALANCE_TYPES = (BalanceType.CLAV, BalanceType.ITAV, BalanceType.XPCD, BalanceType.FWAV)

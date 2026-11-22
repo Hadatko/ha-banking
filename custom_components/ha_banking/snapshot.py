@@ -6,6 +6,16 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from urllib.parse import quote
 
+from .const import (
+    AVAILABLE_BALANCE_TYPES,
+    BOOKED_BALANCE_TYPES,
+    BalanceType,
+    CreditDebit,
+    Direction,
+    SensorKey,
+    direction_from_indicator,
+)
+
 
 @dataclass(frozen=True)
 class Reading:
@@ -49,7 +59,7 @@ class PaymentRecord:
     """One payment kept for the account list and for a new-payment alert."""
 
     payment_id: str
-    direction: str
+    direction: Direction
     amount: float
     currency: str
     booked: str | None
@@ -124,12 +134,12 @@ class AccountSnapshot:
 
     def readings(self) -> dict[str, Reading]:
         readings = {
-            "booked_balance": Reading(self.booked_balance, self.currency, {}),
-            "available_balance": Reading(self.available_balance, self.currency, {}),
-            "incoming_payment": _payment_reading(self.latest_incoming, self.currency),
-            "outgoing_payment": _payment_reading(self.latest_outgoing, self.currency),
-            "transaction_status": Reading(self.latest_status, None, {}),
-            "recent_payments": Reading(
+            SensorKey.BOOKED_BALANCE: Reading(self.booked_balance, self.currency, {}),
+            SensorKey.AVAILABLE_BALANCE: Reading(self.available_balance, self.currency, {}),
+            SensorKey.INCOMING_PAYMENT: _payment_reading(self.latest_incoming, self.currency),
+            SensorKey.OUTGOING_PAYMENT: _payment_reading(self.latest_outgoing, self.currency),
+            SensorKey.TRANSACTION_STATUS: Reading(self.latest_status, None, {}),
+            SensorKey.RECENT_PAYMENTS: Reading(
                 len(self.payments),
                 None,
                 {"payments": [payment.as_dict() for payment in self.payments]},
@@ -138,12 +148,12 @@ class AccountSnapshot:
         if self.month_incoming is None:
             return readings
         for key in (
-            "month_incoming",
-            "month_outgoing",
-            "month_net",
-            "year_incoming",
-            "year_outgoing",
-            "year_net",
+            SensorKey.MONTH_INCOMING,
+            SensorKey.MONTH_OUTGOING,
+            SensorKey.MONTH_NET,
+            SensorKey.YEAR_INCOMING,
+            SensorKey.YEAR_OUTGOING,
+            SensorKey.YEAR_NET,
         ):
             readings[key] = Reading(getattr(self, key), self.currency, {})
         return readings
@@ -163,10 +173,10 @@ def history_start(today: date) -> date:
     return min(today - timedelta(days=90), date(today.year, 1, 1))
 
 
-def period_totals(entries: list[tuple[date | None, str, float]], today: date) -> dict[str, float]:
+def period_totals(entries: list[tuple[date | None, Direction, float]], today: date) -> dict[str, float]:
     """Sum incoming and outgoing amounts for the current month and year."""
 
-    def total(direction: str, month: int | None) -> float:
+    def total(direction: Direction, month: int | None) -> float:
         amount = 0.0
         for when, kind, value in entries:
             if kind != direction or when is None or when.year != today.year:
@@ -176,17 +186,17 @@ def period_totals(entries: list[tuple[date | None, str, float]], today: date) ->
             amount += value
         return round(amount, 2)
 
-    month_incoming = total("incoming", today.month)
-    month_outgoing = total("outgoing", today.month)
-    year_incoming = total("incoming", None)
-    year_outgoing = total("outgoing", None)
+    month_incoming = total(Direction.INCOMING, today.month)
+    month_outgoing = total(Direction.OUTGOING, today.month)
+    year_incoming = total(Direction.INCOMING, None)
+    year_outgoing = total(Direction.OUTGOING, None)
     return {
-        "month_incoming": month_incoming,
-        "month_outgoing": month_outgoing,
-        "month_net": round(month_incoming - month_outgoing, 2),
-        "year_incoming": year_incoming,
-        "year_outgoing": year_outgoing,
-        "year_net": round(year_incoming - year_outgoing, 2),
+        SensorKey.MONTH_INCOMING: month_incoming,
+        SensorKey.MONTH_OUTGOING: month_outgoing,
+        SensorKey.MONTH_NET: round(month_incoming - month_outgoing, 2),
+        SensorKey.YEAR_INCOMING: year_incoming,
+        SensorKey.YEAR_OUTGOING: year_outgoing,
+        SensorKey.YEAR_NET: round(year_incoming - year_outgoing, 2),
     }
 
 
@@ -197,8 +207,8 @@ def build_account_snapshot(
     today: date | None = None,
 ) -> AccountSnapshot:
     """Turn one account payload into balances and the newest payment in each direction."""
-    incoming = _first_payment(transactions, "CRDT")
-    outgoing = _first_payment(transactions, "DBIT")
+    incoming = _first_payment(transactions, CreditDebit.CREDIT)
+    outgoing = _first_payment(transactions, CreditDebit.DEBIT)
     latest_status = None
     if transactions and transactions[0].get("status"):
         latest_status = transactions[0]["status"]
@@ -210,8 +220,8 @@ def build_account_snapshot(
         iban=identification.get("iban") or "",
         currency=account.get("currency") or "CZK",
         product=account.get("productI18N"),
-        booked_balance=_balance(balances, "PRCD"),
-        available_balance=_balance(balances, "CLAV"),
+        booked_balance=_balance(balances, BalanceType.PRCD),
+        available_balance=_balance(balances, BalanceType.CLAV),
         latest_incoming=incoming,
         latest_outgoing=outgoing,
         latest_status=latest_status,
@@ -259,12 +269,8 @@ def _account_transactions(bank, access_token: str, account_id: str, today: date)
 def _api_entries(transactions: list[dict]) -> list[tuple[date | None, str, float]]:
     entries: list[tuple[date | None, str, float]] = []
     for transaction in transactions:
-        indicator = transaction.get("creditDebitIndicator")
-        if indicator == "CRDT":
-            direction = "incoming"
-        elif indicator == "DBIT":
-            direction = "outgoing"
-        else:
+        direction = direction_from_indicator(transaction.get("creditDebitIndicator"))
+        if direction is None:
             continue
         amount = abs(float((transaction.get("amount") or {}).get("value") or 0))
         when = _calendar_day(transaction.get("bookingDate")) or _calendar_day(transaction.get("valueDate"))
@@ -313,7 +319,7 @@ def _balance(balances: list[dict], code: str) -> float | None:
         if type_code != code:
             continue
         value = abs(float(balance["amount"]["value"]))
-        if balance.get("creditDebitIndicator") == "DBIT":
+        if balance.get("creditDebitIndicator") == CreditDebit.DEBIT:
             return -value
         return value
     return None
@@ -322,12 +328,8 @@ def _balance(balances: list[dict], code: str) -> float | None:
 def _api_payments(account_id: str, transactions: list[dict]) -> tuple[PaymentRecord, ...]:
     records: list[PaymentRecord] = []
     for transaction in transactions:
-        indicator = transaction.get("creditDebitIndicator")
-        if indicator == "CRDT":
-            direction = "incoming"
-        elif indicator == "DBIT":
-            direction = "outgoing"
-        else:
+        direction = direction_from_indicator(transaction.get("creditDebitIndicator"))
+        if direction is None:
             continue
         view = _payment(transaction)
         marker = view.entry_reference or view.reference or view.counterparty or view.message or ""
@@ -358,7 +360,7 @@ def _payment(transaction: dict) -> PaymentView:
     details = (transaction.get("entryDetails") or {}).get("transactionDetails") or {}
     parties = details.get("relatedParties") or {}
     indicator = transaction.get("creditDebitIndicator")
-    party = parties.get("debtor") if indicator == "CRDT" else parties.get("creditor")
+    party = parties.get("debtor") if indicator == CreditDebit.CREDIT else parties.get("creditor")
     remittance = details.get("remittanceInformation") or {}
     reference = _reference(remittance)
     return PaymentView(
@@ -391,10 +393,6 @@ def _date(value: object) -> str | None:
     return value.get("date") or value.get("dateTime")
 
 
-BOOKED_BALANCE_TYPES = ("CLBD", "ITBD", "PRCD")
-AVAILABLE_BALANCE_TYPES = ("CLAV", "ITAV", "XPCD", "FWAV")
-
-
 def build_enable_banking_snapshot(
     account: dict,
     balances: list[dict],
@@ -416,8 +414,8 @@ def build_enable_banking_snapshot(
         product=account.get("product") or None,
         booked_balance=_enable_banking_balance(balances, BOOKED_BALANCE_TYPES),
         available_balance=_enable_banking_balance(balances, AVAILABLE_BALANCE_TYPES),
-        latest_incoming=_first_enable_banking_payment(ordered, "CRDT"),
-        latest_outgoing=_first_enable_banking_payment(ordered, "DBIT"),
+        latest_incoming=_first_enable_banking_payment(ordered, CreditDebit.CREDIT),
+        latest_outgoing=_first_enable_banking_payment(ordered, CreditDebit.DEBIT),
         latest_status=latest_status,
         institution=institution,
         logo_url=bank_logo_url(institution, country),
@@ -429,12 +427,8 @@ def build_enable_banking_snapshot(
 def _enable_banking_entries(transactions: list[dict]) -> list[tuple[date | None, str, float]]:
     entries: list[tuple[date | None, str, float]] = []
     for transaction in transactions:
-        indicator = transaction.get("credit_debit_indicator")
-        if indicator == "CRDT":
-            direction = "incoming"
-        elif indicator == "DBIT":
-            direction = "outgoing"
-        else:
+        direction = direction_from_indicator(transaction.get("credit_debit_indicator"))
+        if direction is None:
             continue
         amount = abs(float((transaction.get("transaction_amount") or {}).get("amount") or 0))
         when = _calendar_day(transaction.get("booking_date")) or _calendar_day(transaction.get("value_date"))
@@ -458,12 +452,8 @@ def _enable_banking_balance(balances: list[dict], types: tuple[str, ...]) -> flo
 def _enable_banking_payments(account_id: str, transactions: list[dict]) -> tuple[PaymentRecord, ...]:
     records: list[PaymentRecord] = []
     for transaction in transactions:
-        indicator = transaction.get("credit_debit_indicator")
-        if indicator == "CRDT":
-            direction = "incoming"
-        elif indicator == "DBIT":
-            direction = "outgoing"
-        else:
+        direction = direction_from_indicator(transaction.get("credit_debit_indicator"))
+        if direction is None:
             continue
         view = _enable_banking_payment(transaction)
         marker = view.entry_reference or view.reference or view.counterparty or view.message or ""
@@ -492,7 +482,7 @@ def _first_enable_banking_payment(transactions: list[dict], indicator: str) -> P
 def _enable_banking_payment(transaction: dict) -> PaymentView:
     amount = transaction.get("transaction_amount") or {}
     indicator = transaction.get("credit_debit_indicator")
-    party = transaction.get("debtor") if indicator == "CRDT" else transaction.get("creditor")
+    party = transaction.get("debtor") if indicator == CreditDebit.CREDIT else transaction.get("creditor")
     remittance = transaction.get("remittance_information") or []
     if isinstance(remittance, str):
         message = remittance

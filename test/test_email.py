@@ -5,7 +5,7 @@ from datetime import date, datetime
 from email.message import EmailMessage
 
 from custom_components.ha_banking.mail import (
-    FolderNotFound,
+    MailboxFolderNotFound,
     MailMessage,
     fetch_air_bank_messages,
     imap_error_text,
@@ -15,7 +15,14 @@ from custom_components.ha_banking.mail import (
     snapshots_from_messages,
     text_from_rfc822,
 )
-from custom_components.ha_banking.notices import ParsedNotice, apply_account_names, parse_account_names
+from custom_components.ha_banking.const import Direction
+from custom_components.ha_banking.notices import (
+    CeskaSporitelnaNoticeParser,
+    ParsedNotice,
+    apply_account_names,
+    configured_bank_folders,
+    parse_account_names,
+)
 
 
 def _message(
@@ -296,8 +303,7 @@ def test_marks_only_the_parsed_notice_as_read() -> None:
 
     @contextmanager
     def connect(host, port, username, password, folder, readonly=True):
-        if folder != "airbank":
-            raise FolderNotFound(folder)
+        assert folder in {"airbank", "sporitelna", "mbank"}
         assert readonly is False
         yield mailbox
 
@@ -356,6 +362,124 @@ def test_sender_search_covers_every_registered_bank() -> None:
         "FROM",
         "info@example-bank.test",
     ]
+
+
+def test_csas_incoming_notice_reads_amount_balance_and_counterparty() -> None:
+    parser = CeskaSporitelnaNoticeParser()
+    notice = parser.parse(
+        _message(
+            "Dobrý den,\n"
+            "na účet 1234567890/0800 právě dorazila platba ve výši 20,00 Kč.\n"
+            "Na účtu je nově k dispozici 1 500,00 Kč.\n"
+            "Směr platby: příchozí\n"
+            "Číslo účtu protistrany: 9999999999/3030\n",
+            sender="Česká spořitelna <ceskasporitelna@csas.cz>",
+            subject="Přišla platba",
+            sent_at=datetime(2026, 11, 22, 9, 2),
+        )
+    )
+    assert notice is not None
+    assert notice.account_id == "1234567890/0800"
+    assert notice.name == "Česká spořitelna 1234567890"
+    assert notice.institution == "Česká spořitelna"
+    assert notice.amount == 20.0
+    assert notice.currency == "CZK"
+    assert notice.direction == "incoming"
+    assert notice.available_balance == 1500.0
+    assert notice.counterparty == "9999999999/3030"
+    assert notice.configuration_url == "https://george.csas.cz/"
+    assert parser.parse(
+        _message("Půjčka s úrokem", sender="Česká spořitelna <ceskasporitelna@csas.cz>", subject="Novinky")
+    ) is None
+    assert parser.parse(
+        _message(
+            "na účet 1234567890/0800 právě odešla platba ve výši 20,00 Kč.",
+            sender="Česká spořitelna <ceskasporitelna@csas.cz>",
+            subject="Odešla platba",
+        )
+    ) is None
+
+
+def test_csas_outgoing_notice_reads_the_sent_payment() -> None:
+    notice = CeskaSporitelnaNoticeParser().parse(
+        _message(
+            "z účtu 1234567890/0800 odešla platba ve výši 15,00 Kč.\n"
+            "Na účtu zůstává k dispozici 1 485,00 Kč.\n"
+            "Směr platby: odchozí\n"
+            "Z účtu: 1234567890/0800\n"
+            "Na účet: 9999999999/3030\n",
+            sender="Česká spořitelna <ceskasporitelna@csas.cz>",
+            subject="Odešla platba",
+            sent_at=datetime(2026, 11, 22, 9, 18),
+        )
+    )
+    assert notice is not None
+    assert notice.direction == Direction.OUTGOING
+    assert notice.account_id == "1234567890/0800"
+    assert notice.amount == 15.0
+    assert notice.available_balance == 1485.0
+    assert notice.counterparty == "9999999999/3030"
+    assert configured_bank_folders({})["csas"] == "sporitelna"
+    assert imap_sender_criteria() == [
+        "OR",
+        "FROM",
+        "info@airbank.cz",
+        "OR",
+        "FROM",
+        "ceskasporitelna@csas.cz",
+        "FROM",
+        "kontakt@mbank.cz",
+    ]
+
+
+def test_csas_html_notice_uses_the_visible_text() -> None:
+    mail = EmailMessage()
+    mail["From"] = "Česká spořitelna <ceskasporitelna@csas.cz>"
+    mail["Subject"] = "Přišla platba"
+    mail.set_content(
+        "<p>na účet 1234567890/0800 právě dorazila platba ve výši 20,00 Kč.</p>"
+        "<p>Na účtu je nově k dispozici 1&nbsp;500,00 Kč.</p>",
+        subtype="html",
+    )
+    notice = CeskaSporitelnaNoticeParser().parse(text_from_rfc822(mail.as_bytes()))
+    assert notice is not None
+    assert notice.amount == 20.0
+    assert notice.available_balance == 1500.0
+
+
+def test_csas_notice_ignores_an_inline_image() -> None:
+    mail = EmailMessage()
+    mail["From"] = "Česká spořitelna <ceskasporitelna@csas.cz>"
+    mail["Subject"] = "Přišla platba"
+    mail.set_content(
+        "<p>na účet 1234567890/0800 právě dorazila platba ve výši 20,00 Kč.</p>",
+        subtype="html",
+    )
+    mail.add_related(b"\x89PNG\r\nnot a payment", maintype="image", subtype="png")
+    notice = CeskaSporitelnaNoticeParser().parse(text_from_rfc822(mail.as_bytes()))
+    assert notice is not None
+    assert notice.amount == 20.0
+
+
+def test_a_missing_bank_folder_does_not_stop_the_other_bank() -> None:
+    opened: list[str] = []
+
+    @contextmanager
+    def connect(host, port, username, password, folder, readonly=True):
+        opened.append(folder)
+        if folder == "sporitelna":
+            raise MailboxFolderNotFound("Mailbox folder was not found")
+        yield _Mailbox({})
+
+    fetch_air_bank_messages(
+        "imap.gmail.com",
+        993,
+        "user@example.com",
+        "secret",
+        {"airbank": "airbank", "csas": "sporitelna"},
+        connect=connect,
+    )
+    assert opened == ["airbank", "sporitelna", "mbank"]
 
 
 def test_leaves_mail_unread_when_marking_is_off() -> None:

@@ -41,6 +41,7 @@
         "data": {
           "account_names": "Account names",
           "folder_airbank": "Air Bank folder",
+          "folder_csas": "Česká spořitelna folder",
           "folder_mbank": "mBank folder",
           "imap_host": "IMAP server",
           "imap_password": "Mailbox password",
@@ -51,6 +52,7 @@
         "data_description": {
           "account_names": "One account on each line. The number and the name are separated by an equals sign, not by a space.\n1234567890=Main account\n9999999999=Savings account",
           "folder_airbank": "Mailbox folder or Gmail label for Air Bank notices. Each bank has its own folder.",
+          "folder_csas": "Mailbox folder or Gmail label for Česká spořitelna notices. A received payment in this folder is read.",
           "folder_mbank": "Mailbox folder or Gmail label for the daily mBank E-mail Push summary.",
           "mark_seen": "After a notice is imported, mark that message read. Mail that could not be parsed stays unread.",
           "imap_host": "For Gmail this is imap.gmail.com. Use an app password when the provider requires one.",
@@ -63,6 +65,7 @@
         "data": {
           "account_names": "Account names",
           "folder_airbank": "Air Bank folder",
+          "folder_csas": "Česká spořitelna folder",
           "folder_mbank": "mBank folder",
           "imap_host": "IMAP server",
           "imap_password": "Mailbox password",
@@ -73,6 +76,7 @@
         "data_description": {
           "account_names": "One account on each line. The number and the name are separated by an equals sign, not by a space.\n1234567890=Main account\n9999999999=Savings account",
           "folder_airbank": "Mailbox folder or Gmail label for Air Bank notices. Each bank has its own folder.",
+          "folder_csas": "Mailbox folder or Gmail label for Česká spořitelna notices. A received payment in this folder is read.",
           "folder_mbank": "Mailbox folder or Gmail label for the daily mBank E-mail Push summary.",
           "mark_seen": "After a notice is imported, mark that message read. Mail that could not be parsed stays unread."
         },

@@ -25,6 +25,10 @@ from .snapshot import history_start
 
 LOGGER = logging.getLogger(__name__)
 
+
+class MailboxFolderNotFound(OSError):
+    """The mailbox has no folder with this name."""
+
 _IMAP_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
 __all__ = [
@@ -45,9 +49,6 @@ def _imap_date(value: date) -> str:
 class EmailLoginError(Exception):
     """The mailbox rejected the username or password."""
 
-
-class FolderNotFound(OSError):
-    """The mailbox has no such folder. A bank whose folder is missing is skipped."""
 
 
 def normalize_mailbox_password(password: str) -> str:
@@ -91,13 +92,13 @@ def open_mailbox(host: str, port: int, username: str, password: str, folders: li
     A missing folder is allowed while at least one other folder exists, so a user of
     one bank does not need a folder for every registered bank.
     """
-    missing: FolderNotFound | None = None
+    missing: MailboxFolderNotFound | None = None
     opened = False
     for folder in dict.fromkeys(folders):
         try:
             with _mailbox(host, port, username, password, folder):
                 opened = True
-        except FolderNotFound as err:
+        except MailboxFolderNotFound as err:
             missing = err
     if not opened and missing is not None:
         raise missing
@@ -123,11 +124,11 @@ def fetch_air_bank_messages(
     since = _imap_date(history_start(today))
     grouped: dict[str, list] = {}
     for parser in parsers:
+        if not parser.sender:
+            continue
         folder = bank_folders.get(parser.bank_id) or parser.default_folder
         grouped.setdefault(folder, []).append(parser)
     messages: list[MailMessage] = []
-    missing: FolderNotFound | None = None
-    opened = False
     for folder, folder_parsers in grouped.items():
         try:
             messages.extend(
@@ -143,12 +144,8 @@ def fetch_air_bank_messages(
                     since,
                 )
             )
-            opened = True
-        except FolderNotFound as err:
-            LOGGER.debug("Skipping mailbox folder %s: %s", folder, err)
-            missing = err
-    if not opened and missing is not None:
-        raise missing
+        except MailboxFolderNotFound:
+            LOGGER.warning("Mailbox folder %s was not found, so that bank was skipped", folder)
     return messages
 
 
@@ -184,11 +181,10 @@ def _body_text(message: Message) -> str:
     for part in parts:
         if part.get_content_disposition() == "attachment" or part.is_multipart():
             continue
-        content = _part_text(part)
         if part.get_content_type() == "text/html":
-            html_parts.append(content)
-        else:
-            plain.append(content)
+            html_parts.append(_part_text(part))
+        elif part.get_content_type() == "text/plain":
+            plain.append(_part_text(part))
     if any(part.strip() for part in plain):
         return "\n".join(plain)
     return "\n".join(_html_to_text(part) for part in html_parts)
@@ -253,7 +249,7 @@ def _mailbox(
             raise EmailLoginError(reason or "Mailbox rejected the username or password") from err
         status, _ = client.select(_quoted(folder), readonly=readonly)
         if status != "OK":
-            raise FolderNotFound(f"Mailbox folder {folder} was not found")
+            raise MailboxFolderNotFound("Mailbox folder was not found")
         yield client
     finally:
         try:

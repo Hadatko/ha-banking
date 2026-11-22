@@ -14,14 +14,14 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, SensorKey
 from .coordinator import AirBankCoordinator
 from .snapshot import AccountSnapshot, Reading
 
 SENSORS: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
-        key="booked_balance",
-        translation_key="booked_balance",
+        key=SensorKey.BOOKED_BALANCE,
+        translation_key=SensorKey.BOOKED_BALANCE,
         device_class=SensorDeviceClass.MONETARY,
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=2,
@@ -29,8 +29,8 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
         has_entity_name=True,
     ),
     SensorEntityDescription(
-        key="available_balance",
-        translation_key="available_balance",
+        key=SensorKey.AVAILABLE_BALANCE,
+        translation_key=SensorKey.AVAILABLE_BALANCE,
         device_class=SensorDeviceClass.MONETARY,
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=2,
@@ -38,30 +38,30 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
         has_entity_name=True,
     ),
     SensorEntityDescription(
-        key="incoming_payment",
-        translation_key="incoming_payment",
+        key=SensorKey.INCOMING_PAYMENT,
+        translation_key=SensorKey.INCOMING_PAYMENT,
         device_class=SensorDeviceClass.MONETARY,
         suggested_display_precision=2,
         icon="mdi:bank-transfer-in",
         has_entity_name=True,
     ),
     SensorEntityDescription(
-        key="outgoing_payment",
-        translation_key="outgoing_payment",
+        key=SensorKey.OUTGOING_PAYMENT,
+        translation_key=SensorKey.OUTGOING_PAYMENT,
         device_class=SensorDeviceClass.MONETARY,
         suggested_display_precision=2,
         icon="mdi:bank-transfer-out",
         has_entity_name=True,
     ),
     SensorEntityDescription(
-        key="transaction_status",
-        translation_key="transaction_status",
+        key=SensorKey.TRANSACTION_STATUS,
+        translation_key=SensorKey.TRANSACTION_STATUS,
         icon="mdi:information-outline",
         has_entity_name=True,
     ),
     SensorEntityDescription(
-        key="year_incoming",
-        translation_key="year_incoming",
+        key=SensorKey.YEAR_INCOMING,
+        translation_key=SensorKey.YEAR_INCOMING,
         device_class=SensorDeviceClass.MONETARY,
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=2,
@@ -69,8 +69,8 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
         has_entity_name=True,
     ),
     SensorEntityDescription(
-        key="year_outgoing",
-        translation_key="year_outgoing",
+        key=SensorKey.YEAR_OUTGOING,
+        translation_key=SensorKey.YEAR_OUTGOING,
         device_class=SensorDeviceClass.MONETARY,
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=2,
@@ -78,8 +78,8 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
         has_entity_name=True,
     ),
     SensorEntityDescription(
-        key="year_net",
-        translation_key="year_net",
+        key=SensorKey.YEAR_NET,
+        translation_key=SensorKey.YEAR_NET,
         device_class=SensorDeviceClass.MONETARY,
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=2,
@@ -87,8 +87,8 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
         has_entity_name=True,
     ),
     SensorEntityDescription(
-        key="month_incoming",
-        translation_key="month_incoming",
+        key=SensorKey.MONTH_INCOMING,
+        translation_key=SensorKey.MONTH_INCOMING,
         device_class=SensorDeviceClass.MONETARY,
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=2,
@@ -96,8 +96,8 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
         has_entity_name=True,
     ),
     SensorEntityDescription(
-        key="month_outgoing",
-        translation_key="month_outgoing",
+        key=SensorKey.MONTH_OUTGOING,
+        translation_key=SensorKey.MONTH_OUTGOING,
         device_class=SensorDeviceClass.MONETARY,
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=2,
@@ -105,8 +105,8 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
         has_entity_name=True,
     ),
     SensorEntityDescription(
-        key="month_net",
-        translation_key="month_net",
+        key=SensorKey.MONTH_NET,
+        translation_key=SensorKey.MONTH_NET,
         device_class=SensorDeviceClass.MONETARY,
         state_class=SensorStateClass.TOTAL,
         suggested_display_precision=2,
@@ -114,8 +114,8 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
         has_entity_name=True,
     ),
     SensorEntityDescription(
-        key="recent_payments",
-        translation_key="recent_payments",
+        key=SensorKey.RECENT_PAYMENTS,
+        translation_key=SensorKey.RECENT_PAYMENTS,
         icon="mdi:format-list-bulleted",
         has_entity_name=True,
     ),

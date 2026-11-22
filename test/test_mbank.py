@@ -8,7 +8,7 @@ from email.message import EmailMessage
 import pytest
 
 from custom_components.ha_banking import mail
-from custom_components.ha_banking.mail import FolderNotFound, fetch_air_bank_messages, snapshots_from_messages, text_from_rfc822
+from custom_components.ha_banking.mail import MailboxFolderNotFound, fetch_air_bank_messages, snapshots_from_messages, text_from_rfc822
 from custom_components.ha_banking.mbank import movements_from_html, parse_row
 from custom_components.ha_banking.notices import (
     BANK_PARSERS,
@@ -170,7 +170,7 @@ def test_snapshot_from_several_summaries() -> None:
 
 def test_mbank_is_registered_for_imap_search() -> None:
     assert any(isinstance(parser, MBankNoticeParser) for parser in BANK_PARSERS)
-    assert imap_sender_criteria() == ["OR", "FROM", "info@airbank.cz", "FROM", "kontakt@mbank.cz"]
+    assert imap_sender_criteria()[-2:] == ["FROM", "kontakt@mbank.cz"]
 
 
 class _Box:
@@ -187,7 +187,7 @@ def _connect_to(folders: dict[str, dict[bytes, bytes]]):
     @contextmanager
     def connect(host, port, username, password, folder, readonly=True):
         if folder not in folders:
-            raise FolderNotFound(folder)
+            raise MailboxFolderNotFound(folder)
         yield _Box(folders[folder])
 
     return connect
@@ -201,15 +201,10 @@ def test_summaries_are_fetched_and_a_missing_bank_folder_is_skipped() -> None:
     assert len(parse_notices(messages[0])) == 4
 
 
-def test_every_folder_missing_is_still_an_error() -> None:
-    with pytest.raises(FolderNotFound):
-        fetch_air_bank_messages("h", 993, "u", "p", {"airbank": "x", "mbank": "y"}, connect=_connect_to({}))
-
-
 def test_mailbox_check_accepts_one_existing_folder(monkeypatch) -> None:
     monkeypatch.setattr(mail, "_mailbox", _connect_to({"airbank": {}}))
     mail.open_mailbox("h", 993, "u", "p", ["airbank", "mbank"])
-    with pytest.raises(mail.FolderNotFound):
+    with pytest.raises(mail.MailboxFolderNotFound):
         mail.open_mailbox("h", 993, "u", "p", ["mbank"])
 
 

@@ -41,6 +41,7 @@
         "data": {
           "account_names": "Názvy účtů",
           "folder_airbank": "Složka Air Bank",
+          "folder_csas": "Složka Česká spořitelna",
           "folder_mbank": "Složka mBank",
           "imap_host": "IMAP server",
           "imap_password": "Heslo do schránky",
@@ -51,6 +52,7 @@
         "data_description": {
           "account_names": "Jeden účet na každý řádek. Číslo a název odděluje rovná se, ne mezera.\n1234567890=Hlavní účet\n9999999999=Spořicí účet",
           "folder_airbank": "Složka nebo štítek v Gmailu pro avíza Air Bank. Každá banka má vlastní složku.",
+          "folder_csas": "Složka nebo štítek v Gmailu pro avíza České spořitelny. Z této složky se čte přijatá platba.",
           "folder_mbank": "Složka nebo štítek v Gmailu pro denní souhrn mBank E-mail Push.",
           "mark_seen": "Po importu avíza zprávu označ jako přečtenou. Zpráva, kterou se nepodařilo přečíst, zůstane nepřečtená.",
           "imap_host": "Pro Gmail je to imap.gmail.com. Když poskytovatel vyžaduje heslo aplikace, použij ho.",
@@ -63,6 +65,7 @@
         "data": {
           "account_names": "Názvy účtů",
           "folder_airbank": "Složka Air Bank",
+          "folder_csas": "Složka Česká spořitelna",
           "folder_mbank": "Složka mBank",
           "imap_host": "IMAP server",
           "imap_password": "Heslo do schránky",
@@ -73,6 +76,7 @@
         "data_description": {
           "account_names": "Jeden účet na každý řádek. Číslo a název odděluje rovná se, ne mezera.\n1234567890=Hlavní účet\n9999999999=Spořicí účet",
           "folder_airbank": "Složka nebo štítek v Gmailu pro avíza Air Bank. Každá banka má vlastní složku.",
+          "folder_csas": "Složka nebo štítek v Gmailu pro avíza České spořitelny. Z této složky se čte přijatá platba.",
           "folder_mbank": "Složka nebo štítek v Gmailu pro denní souhrn mBank E-mail Push.",
           "mark_seen": "Po importu avíza zprávu označ jako přečtenou. Zpráva, kterou se nepodařilo přečíst, zůstane nepřečtená."
         },

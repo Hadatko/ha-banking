@@ -41,6 +41,7 @@
         "data": {
           "account_names": "Mená účtov",
           "folder_airbank": "Priečinok Air Bank",
+          "folder_csas": "Priečinok Česká spořitelna",
           "folder_mbank": "Priečinok mBank",
           "imap_host": "IMAP server",
           "imap_password": "Heslo do schránky",
@@ -51,6 +52,7 @@
         "data_description": {
           "account_names": "Jeden účet na každý riadok. Číslo a meno oddeľuje rovná sa, nie medzera.\n1234567890=Hlavný účet\n9999999999=Sporiaci účet",
           "folder_airbank": "Priečinok alebo štítok v Gmaili pre avíza Air Bank. Každá banka má vlastný priečinok.",
+          "folder_csas": "Priečinok alebo štítok v Gmaile pre avíza Českej sporiteľne. Z tohto priečinka sa číta prijatá platba.",
           "folder_mbank": "Priečinok alebo štítok v Gmaili pre denný súhrn mBank E-mail Push.",
           "mark_seen": "Po importe avíza správu označ ako prečítanú. Správa, ktorú sa nepodarilo prečítať, ostane neprečítaná.",
           "imap_host": "Pre Gmail je to imap.gmail.com. Keď poskytovateľ vyžaduje heslo aplikácie, použi to.",
@@ -63,6 +65,7 @@
         "data": {
           "account_names": "Mená účtov",
           "folder_airbank": "Priečinok Air Bank",
+          "folder_csas": "Priečinok Česká spořitelna",
           "folder_mbank": "Priečinok mBank",
           "imap_host": "IMAP server",
           "imap_password": "Heslo do schránky",
@@ -73,6 +76,7 @@
         "data_description": {
           "account_names": "Jeden účet na každý riadok. Číslo a meno oddeľuje rovná sa, nie medzera.\n1234567890=Hlavný účet\n9999999999=Sporiaci účet",
           "folder_airbank": "Priečinok alebo štítok v Gmaili pre avíza Air Bank. Každá banka má vlastný priečinok.",
+          "folder_csas": "Priečinok alebo štítok v Gmaile pre avíza Českej sporiteľne. Z tohto priečinka sa číta prijatá platba.",
           "folder_mbank": "Priečinok alebo štítok v Gmaili pre denný súhrn mBank E-mail Push.",
           "mark_seen": "Po importe avíza správu označ ako prečítanú. Správa, ktorú sa nepodarilo prečítať, ostane neprečítaná."
         },
