@@ -81,6 +81,7 @@ def text_from_rfc822(raw: bytes) -> MailMessage:
         subject=str(message.get("Subject") or ""),
         body=_body_text(message),
         sent_at=sent_at,
+        html=_html_parts(message),
     )
 
 
@@ -191,6 +192,12 @@ def _body_text(message: Message) -> str:
     if any(part.strip() for part in plain):
         return "\n".join(plain)
     return "\n".join(_html_to_text(part) for part in html_parts)
+
+
+def _html_parts(message: Message) -> tuple[str, ...]:
+    """Raw HTML of every text/html part, attachments included. mBank puts its table in one."""
+    parts: Iterator[Message] = message.walk() if message.is_multipart() else iter((message,))
+    return tuple(_part_text(part) for part in parts if part.get_content_type() == "text/html")
 
 
 def _part_text(part: Message) -> str:

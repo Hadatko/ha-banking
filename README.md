@@ -2,7 +2,7 @@
 
 **Security is your responsibility.** The author does not accept liability for the security of this integration, for how you configure it, or for what happens to your mailbox, certificates, or bank data. Use it only if you are comfortable with that. Read the code and check it yourself, including with your own AI, before you connect a real account.
 
-Read-only Home Assistant integration for bank accounts. With a bank API it tracks booked and available balances, the latest incoming payment, the latest outgoing payment, and the status of the newest transaction. With email notices it tracks only the latest incoming and outgoing payment. Air Bank is the first bank with a direct API and an email parser. Enable Banking can connect other banks. Support for another bank can be added when someone asks for it or opens a pull request.
+Read-only Home Assistant integration for bank accounts. With a bank API it tracks booked and available balances, the latest incoming payment, the latest outgoing payment, and the status of the newest transaction. With email notices it tracks only the latest incoming and outgoing payment. Air Bank is the first bank with a direct API and an email parser. mBank is read from its daily E-mail Push summary. Enable Banking can connect other banks. Support for another bank can be added when someone asks for it or opens a pull request.
 
 It does not create or authorize payments.
 
@@ -50,6 +50,17 @@ Home Assistant reads the mailbox as soon as the integration is added, and again 
 Each read covers the registered bank senders in that folder back to 1 January of the current year, and at least 90 days. It reads that whole window again, so a notice is not added twice and a late notice still joins the month or year of its date. A notice that arrives just after a read waits for the next one, at most 15 minutes.
 
 Air Bank is the first parser. Another bank is another parser beside it, with its own sender and its own account identity. A password-protected account statement is ignored. The newest notice sets the available balance from the sentence `Dostupný zůstatek k … je …`. The booked balance is not in the mail, so that sensor stays empty. The account name in front of the account number becomes the device name, unless the account-name list gives that number its own name. Notices are summed for the current year and the current month, each as incoming, outgoing, and net. A notice without a date is left out of those sums.
+
+#### mBank
+
+mBank does not send a mail for each payment. It sends one **E-mail Push** summary each morning, about 06:30, for the previous day. The sender is `kontakt@mbank.cz` and the subject is `mBank – Email Push`. The text of the mail is only a cover note. The table of operations is in the attached HTML file, and Home Assistant reads that attachment.
+
+1. In mBank internet banking, turn on E-mail Push for the account.
+2. In Gmail, filter From `kontakt@mbank.cz` with subject `Email Push` and apply a label, for example `mbank`. Show that label in IMAP. Enter the same name as the mBank folder in Home Assistant.
+
+Each row of the summary becomes one payment, dated by the day of the summary and the time in the row. Card payments, incoming and outgoing transfers, instant payments, and direct debits are read. A login confirmation or a standing order that was not carried out is not a payment and is skipped. The available balance comes from the newest row (`Dostup.zust` or `dispo`), which includes any overdraft. The booked balance stays empty. Payments arrive in Home Assistant the morning after they happen, so the announcement of a new payment is up to one day late.
+
+A bank whose folder does not exist in the mailbox is skipped, so an Air Bank user does not need an mBank folder and the other way round. When no folder exists at all, the read fails as before.
 
 ### Enable Banking
 
@@ -138,7 +149,7 @@ Data is refreshed every 15 minutes. The mailbox is included in that schedule: th
 
 This integration runs inside your Home Assistant. The Enable Banking application ID, private key, Air Bank certificate, and mailbox password stay on that host. Account data is stored as Home Assistant sensor states. This project does not run a server that receives your bank data, and it does not send payments.
 
-Enable Banking and the mailbox provider apply their own privacy terms to those connections. Email notices are read from your IMAP server. Only messages from `info@airbank.cz` are parsed.
+Enable Banking and the mailbox provider apply their own privacy terms to those connections. Email notices are read from your IMAP server. Only messages from `info@airbank.cz` and `kontakt@mbank.cz` are parsed.
 
 ## Terms
 

@@ -41,6 +41,7 @@
         "data": {
           "account_names": "Mená účtov",
           "folder_airbank": "Priečinok Air Bank",
+          "folder_mbank": "Priečinok mBank",
           "imap_host": "IMAP server",
           "imap_password": "Heslo do schránky",
           "imap_port": "IMAP port",
@@ -50,6 +51,7 @@
         "data_description": {
           "account_names": "Jeden účet na každý riadok. Číslo a meno oddeľuje rovná sa, nie medzera.\n1234567890=Hlavný účet\n9999999999=Sporiaci účet",
           "folder_airbank": "Priečinok alebo štítok v Gmaili pre avíza Air Bank. Každá banka má vlastný priečinok.",
+          "folder_mbank": "Priečinok alebo štítok v Gmaili pre denný súhrn mBank E-mail Push.",
           "mark_seen": "Po importe avíza správu označ ako prečítanú. Správa, ktorú sa nepodarilo prečítať, ostane neprečítaná.",
           "imap_host": "Pre Gmail je to imap.gmail.com. Keď poskytovateľ vyžaduje heslo aplikácie, použi to.",
           "imap_password": "Ostáva na tomto Home Assistantovi a slúži len na čítanie pošty."
@@ -61,6 +63,7 @@
         "data": {
           "account_names": "Mená účtov",
           "folder_airbank": "Priečinok Air Bank",
+          "folder_mbank": "Priečinok mBank",
           "imap_host": "IMAP server",
           "imap_password": "Heslo do schránky",
           "imap_port": "IMAP port",
@@ -70,6 +73,7 @@
         "data_description": {
           "account_names": "Jeden účet na každý riadok. Číslo a meno oddeľuje rovná sa, nie medzera.\n1234567890=Hlavný účet\n9999999999=Sporiaci účet",
           "folder_airbank": "Priečinok alebo štítok v Gmaili pre avíza Air Bank. Každá banka má vlastný priečinok.",
+          "folder_mbank": "Priečinok alebo štítok v Gmaili pre denný súhrn mBank E-mail Push.",
           "mark_seen": "Po importe avíza správu označ ako prečítanú. Správa, ktorú sa nepodarilo prečítať, ostane neprečítaná."
         },
         "description": "Schránka uložené heslo odmietla. Zadaj ho znova. Home Assistant ďalej číta len avíza Air Bank.",

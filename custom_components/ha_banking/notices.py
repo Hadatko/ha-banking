@@ -7,6 +7,7 @@ from datetime import date, datetime
 import re
 import unicodedata
 
+from . import mbank
 from .snapshot import (
     AccountSnapshot,
     PaymentRecord,
@@ -26,6 +27,7 @@ class MailMessage:
     subject: str
     body: str
     sent_at: datetime | None
+    html: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -46,6 +48,7 @@ class ParsedNotice:
     available_balance: float | None = None
     country: str = "CZ"
     counterparty: str | None = None
+    reference_id: str | None = None
 
 
 class AirBankNoticeParser:
@@ -107,7 +110,48 @@ class AirBankNoticeParser:
         )
 
 
-BANK_PARSERS = (AirBankNoticeParser(),)
+class MBankNoticeParser:
+    """mBank daily E-mail Push: one mail lists every movement of the previous day."""
+
+    bank_id = "mbank"
+    default_folder = "mbank"
+    sender = mbank.SENDER
+    _sender = re.compile(r"(?:^|[\s<\"])kontakt@mbank\.cz(?=$|[\s>\"])", re.IGNORECASE)
+
+    def parse(self, message: MailMessage) -> ParsedNotice | None:
+        notices = self.parse_all(message)
+        return notices[0] if notices else None
+
+    def parse_all(self, message: MailMessage) -> list[ParsedNotice]:
+        if self._sender.search(message.sender) is None:
+            return []
+        for html in message.html:
+            movements = mbank.movements_from_html(html)
+            if movements:
+                return [self._notice(movement) for movement in movements]
+        return []
+
+    @staticmethod
+    def _notice(movement: mbank.Movement) -> ParsedNotice:
+        return ParsedNotice(
+            account_number=movement.account_number,
+            account_id=f"{movement.account_number}/{mbank.BANK_CODE}",
+            name=f"mBank {movement.account_number}",
+            institution="mBank",
+            amount=movement.amount,
+            currency=movement.currency,
+            direction=movement.direction,
+            variable_symbol=None,
+            sent_at=movement.occurred_at,
+            subject=movement.text,
+            configuration_url="https://online.mbank.cz/",
+            available_balance=movement.available_balance,
+            counterparty=movement.counterparty or movement.counterparty_account,
+            reference_id=movement.movement_id,
+        )
+
+
+BANK_PARSERS = (AirBankNoticeParser(), MBankNoticeParser())
 
 
 def parse_air_bank_notice(message: MailMessage) -> ParsedNotice | None:
@@ -122,6 +166,16 @@ def parse_notice(message: MailMessage, parsers=BANK_PARSERS) -> ParsedNotice | N
         if notice is not None:
             return notice
     return None
+
+
+def parse_notices(message: MailMessage, parsers=BANK_PARSERS) -> list[ParsedNotice]:
+    """Every payment in the message. A summary mail can hold several."""
+    for parser in parsers:
+        parse_all = getattr(parser, "parse_all", None)
+        notices = parse_all(message) if parse_all else [n for n in (parser.parse(message),) if n]
+        if notices:
+            return notices
+    return []
 
 
 def parse_account_names(raw: str | dict[str, str]) -> dict[str, str]:
@@ -204,11 +258,11 @@ def snapshots_from_messages(
     if today is None:
         today = date.today()
     grouped: dict[str, list[tuple[int, ParsedNotice]]] = {}
-    for index, message in enumerate(messages):
-        notice = parse_notice(message, parsers)
-        if notice is None:
-            continue
-        grouped.setdefault(notice.account_id, []).append((index, notice))
+    order = 0
+    for message in messages:
+        for notice in parse_notices(message, parsers):
+            grouped.setdefault(notice.account_id, []).append((order, notice))
+            order += 1
     return [_snapshot(notices, today) for notices in grouped.values()]
 
 
@@ -268,7 +322,7 @@ def _notice_payments(notices: list[tuple[int, ParsedNotice]]) -> tuple[PaymentRe
                     notice.direction,
                     notice.amount,
                     booked,
-                    notice.variable_symbol or notice.subject or "",
+                    notice.reference_id or notice.variable_symbol or notice.subject or "",
                 ),
                 direction=notice.direction,
                 amount=notice.amount,
