@@ -10,7 +10,9 @@ from homeassistant.helpers.config_entry_oauth2_flow import OAuth2Session
 from .config_flow import AirBankConfigFlow, implementation_from_entry
 from .const import AuthMethod, CONF_AUTH_METHOD, CONF_IMAP_HOST, CONF_IMAP_USERNAME, CONF_LARGE_PAYMENT, CONF_LOW_BALANCE
 from .coordinator import AirBankCoordinator
-from .dashboard import async_publish_graph_statistics, async_setup_dashboard
+from .const import DashboardStyle
+from .dashboard import async_setup_dashboard, dashboard_style
+from .dashboard_classic import async_publish_graph_statistics
 from .payments import (
     known_payments,
     low_balance_alerted,
@@ -59,13 +61,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirBankConfigEntry) -> b
         minimum, low = _limits()
         publish_new_payments(hass, coordinator.data or [], minimum)
         publish_low_balance(hass, coordinator.data or [], low)
-        async_publish_graph_statistics(hass, coordinator.data or [])
+        _publish_classic_statistics()
         hass.async_create_task(async_setup_dashboard(hass))
 
+    def _publish_classic_statistics() -> None:
+        # Only the classic charts read recorder statistics.
+        if dashboard_style(hass) == DashboardStyle.CLASSIC:
+            async_publish_graph_statistics(hass, coordinator.data or [])
+
+    async def _options_updated(hass: HomeAssistant, _entry: ConfigEntry) -> None:
+        _publish_classic_statistics()
+        await async_setup_dashboard(hass)
+
     entry.async_on_unload(coordinator.async_add_listener(_on_update))
+    entry.async_on_unload(entry.add_update_listener(_options_updated))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_setup_dashboard(hass)
-    async_publish_graph_statistics(hass, coordinator.data or [])
+    _publish_classic_statistics()
     if cached:
         entry.async_create_background_task(hass, coordinator.async_refresh(), f"{entry.entry_id} mailbox sync")
     return True
