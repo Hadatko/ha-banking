@@ -2,6 +2,7 @@
   "domain": "ha_banking",
   "name": "HA Banking",
   "after_dependencies": ["http", "recorder"],
+  "categories": ["finance"],
   "codeowners": ["@Hadatko"],
   "config_flow": true,
   "dependencies": ["frontend", "lovelace", "persistent_notification"],
