@@ -85,6 +85,8 @@ class PaymentRecord:
 
 
 PAYMENT_LIST_LIMIT = 30
+# Months in the monthly history, the current month included.
+HISTORY_MONTHS = 13
 
 
 def payment_id(account_id: str, direction: str, amount: float, booked: str | None, marker: str) -> str:
@@ -131,6 +133,7 @@ class AccountSnapshot:
     year_net: float | None = None
     logo_url: str | None = None
     payments: tuple[PaymentRecord, ...] = ()
+    months: tuple[dict, ...] = ()
 
     def readings(self) -> dict[str, Reading]:
         readings = {
@@ -142,7 +145,10 @@ class AccountSnapshot:
             SensorKey.RECENT_PAYMENTS: Reading(
                 len(self.payments),
                 None,
-                {"payments": [payment.as_dict() for payment in self.payments]},
+                {
+                    "payments": [payment.as_dict() for payment in self.payments],
+                    "months": [dict(month) for month in self.months] or None,
+                },
             ),
         }
         if self.month_incoming is None:
@@ -173,8 +179,55 @@ def history_start(today: date) -> date:
     return min(today - timedelta(days=90), date(today.year, 1, 1))
 
 
-def period_totals(entries: list[tuple[date | None, Direction, float]], today: date) -> dict[str, float]:
-    """Sum incoming and outgoing amounts for the current month and year."""
+def month_keys(today: date, count: int = HISTORY_MONTHS) -> list[str]:
+    """``YYYY-MM`` of the last ``count`` months, oldest first, the current month last."""
+    index = today.year * 12 + today.month - 1
+    return [f"{i // 12:04d}-{i % 12 + 1:02d}" for i in range(index - count + 1, index + 1)]
+
+
+def mail_history_start(today: date) -> date:
+    """First day of the oldest month in the monthly history. Covers 1 January as well."""
+    year, month = (int(part) for part in month_keys(today)[0].split("-"))
+    return min(date(year, month, 1), date(today.year, 1, 1))
+
+
+def monthly_totals(
+    entries: list[tuple[date | None, Direction, float]],
+    today: date,
+    balances: list[tuple[datetime, float]] | None = None,
+) -> tuple[dict, ...]:
+    """Incoming, outgoing and net for each month of the history, empty months as zero.
+
+    ``balances`` are (time, available balance) points; each month gets the last one in it.
+    """
+    months = {key: {"month": key, "incoming": 0.0, "outgoing": 0.0, "count": 0} for key in month_keys(today)}
+    for when, direction, amount in entries:
+        if when is None:
+            continue
+        month = months.get(f"{when.year:04d}-{when.month:02d}")
+        if month is None:
+            continue
+        month["incoming" if direction == Direction.INCOMING else "outgoing"] += amount
+        month["count"] += 1
+    last: dict[str, tuple[datetime, float]] = {}
+    for when, value in balances or []:
+        key = f"{when.year:04d}-{when.month:02d}"
+        if key in months and (key not in last or when >= last[key][0]):
+            last[key] = (when, value)
+    for key, month in months.items():
+        month["incoming"] = round(month["incoming"], 2)
+        month["outgoing"] = round(month["outgoing"], 2)
+        month["net"] = round(month["incoming"] - month["outgoing"], 2)
+        month["balance"] = last[key][1] if key in last else None
+    return tuple(months.values())
+
+
+def period_totals(
+    entries: list[tuple[date | None, Direction, float]],
+    today: date,
+    balances: list[tuple[datetime, float]] | None = None,
+) -> dict:
+    """Sum incoming and outgoing amounts for the current month and year, and per month."""
 
     def total(direction: Direction, month: int | None) -> float:
         amount = 0.0
@@ -197,6 +250,7 @@ def period_totals(entries: list[tuple[date | None, Direction, float]], today: da
         SensorKey.YEAR_INCOMING: year_incoming,
         SensorKey.YEAR_OUTGOING: year_outgoing,
         SensorKey.YEAR_NET: round(year_incoming - year_outgoing, 2),
+        "months": monthly_totals(entries, today, balances),
     }
 
 
