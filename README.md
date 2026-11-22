@@ -151,7 +151,7 @@ Data is refreshed every 15 minutes. The mailbox is included in that schedule: th
 
 This integration runs inside your Home Assistant. The Enable Banking application ID, private key, Air Bank certificate, and mailbox password stay on that host. Account data is stored as Home Assistant sensor states. This project does not run a server that receives your bank data, and it does not send payments.
 
-Enable Banking and the mailbox provider apply their own privacy terms to those connections. Email notices are read from your IMAP server. Only messages from `info@airbank.cz` and `kontakt@mbank.cz` are parsed.
+Enable Banking and the mailbox provider apply their own privacy terms to those connections. Email notices are read from your IMAP server. Only messages from `info@airbank.cz`, `ceskasporitelna@csas.cz`, and `kontakt@mbank.cz` are parsed.
 
 ## Terms
 

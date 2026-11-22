@@ -80,7 +80,7 @@
           "folder_mbank": "Mailbox folder or Gmail label for the daily mBank E-mail Push summary.",
           "mark_seen": "After a notice is imported, mark that message read. Mail that could not be parsed stays unread."
         },
-        "description": "The mailbox rejected the saved password. Enter it again. Home Assistant keeps reading only Air Bank balance notices.",
+        "description": "The mailbox rejected the saved password. Enter it again. Home Assistant keeps reading the same mailbox.",
         "title": "Reconnect the mailbox"
       },
       "enable_banking": {

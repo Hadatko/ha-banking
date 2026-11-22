@@ -80,7 +80,7 @@
           "folder_mbank": "Složka nebo štítek v Gmailu pro denní souhrn mBank E-mail Push.",
           "mark_seen": "Po importu avíza zprávu označ jako přečtenou. Zpráva, kterou se nepodařilo přečíst, zůstane nepřečtená."
         },
-        "description": "Schránka uložené heslo odmítla. Zadej ho znovu. Home Assistant dál čte jen avíza Air Bank.",
+        "description": "Schránka uložené heslo odmítla. Zadej ho znovu. Home Assistant dál čte tu samou schránku.",
         "title": "Znovu připojit schránku"
       },
       "enable_banking": {
