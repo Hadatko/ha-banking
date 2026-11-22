@@ -119,13 +119,45 @@
         "title": "Reconnect Air Bank"
       },
       "user": {
-        "description": "Read the latest payment from Air Bank emails, or use Enable Banking, or a licensed Air Bank certificate. Email notices include the available balance after each change. The booked balance stays empty. Payments cannot be sent from Home Assistant.",
+        "description": "Choose email notices, Enable Banking, or a bank's own API. Under the bank API, Air Bank uses a licensed certificate and Česká spořitelna uses an application from the Erste developer portal. Payments cannot be sent from Home Assistant.",
         "menu_options": {
-          "direct": "Air Bank certificate",
+          "bank_api": "Bank API",
           "email": "Email notices",
           "enable_banking": "Enable Banking"
         },
         "title": "Connect a bank"
+      },
+      "bank_api": {
+        "description": "Choose the bank. Each bank uses its own application, stored only on this Home Assistant. Payments cannot be sent from Home Assistant.",
+        "menu_options": {
+          "csas": "Česká spořitelna",
+          "direct": "Air Bank certificate"
+        },
+        "title": "Bank API"
+      },
+      "csas": {
+        "data": {
+          "client_id": "Client ID",
+          "client_secret": "Client secret",
+          "sandbox": "Sandbox",
+          "web_api_key": "Web API key"
+        },
+        "data_description": {
+          "client_id": "Client ID of your Česká spořitelna application.",
+          "client_secret": "Client secret of that application. Stored on this Home Assistant host.",
+          "sandbox": "Use the Erste sandbox instead of production. Sandbox accounts are test data.",
+          "web_api_key": "Web API key from the same application."
+        },
+        "description": "Use your own application from the Erste developer portal, with Accounts API and the siblings.accounts scope. Register {redirect_uri} as the redirect URI. Production has to be approved by Česká spořitelna. For a personal account the bank does not charge the Premium API fee. Payments cannot be sent from Home Assistant.",
+        "title": "Česká spořitelna"
+      },
+      "csas_consent": {
+        "description": "Sign in at George and allow this application to read payment accounts.",
+        "title": "Sign in at Česká spořitelna"
+      },
+      "csas_reauth_confirm": {
+        "description": "Sign in again at George. The application redirect URI must be {redirect_uri}.",
+        "title": "Reconnect Česká spořitelna"
       }
     }
   },

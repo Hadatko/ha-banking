@@ -27,12 +27,17 @@ from .const import (
     CONF_IMAP_PORT,
     CONF_IMAP_USERNAME,
     CONF_MARK_SEEN,
+    CONF_CLIENT_ID,
+    CONF_CLIENT_SECRET,
     CONF_KEY,
+    CONF_REFRESH_TOKEN,
     CONF_SANDBOX,
     CONF_SESSION_ID,
+    CONF_WEB_API_KEY,
     DOMAIN,
     SCAN_INTERVAL,
 )
+from .csas import CeskaSporitelna, CeskaSporitelnaError, collect_csas_snapshots
 from .lib.client import AirBank
 from .lib.enable_banking import (
     EnableBanking,
@@ -71,6 +76,8 @@ class AirBankCoordinator(DataUpdateCoordinator[list[AccountSnapshot]]):
             return await self._async_update_enable_banking()
         if method == AuthMethod.EMAIL:
             return await self._async_update_email()
+        if method == AuthMethod.CSAS:
+            return await self._async_update_csas()
         if self.session is None:
             raise ConfigEntryAuthFailed("Air Bank login is missing")
         try:
@@ -134,6 +141,34 @@ class AirBankCoordinator(DataUpdateCoordinator[list[AccountSnapshot]]):
         )
         snapshots = snapshots_from_messages(messages, today=today)
         return apply_account_names(snapshots, data.get(CONF_ACCOUNT_NAMES) or {})
+
+    async def _async_update_csas(self) -> list[AccountSnapshot]:
+        data: dict[str, Any] = self.entry.data
+        bank = CeskaSporitelna(
+            sandbox=bool(data.get(CONF_SANDBOX)),
+            client_id=data[CONF_CLIENT_ID],
+            client_secret=data[CONF_CLIENT_SECRET],
+            web_api_key=data[CONF_WEB_API_KEY],
+        )
+        try:
+            tokens = await self.hass.async_add_executor_job(bank.refresh, data[CONF_REFRESH_TOKEN])
+        except CeskaSporitelnaError as err:
+            if err.status in (400, 401, 403):
+                raise ConfigEntryAuthFailed("Česká spořitelna login expired") from err
+            raise UpdateFailed("Česká spořitelna token refresh failed") from err
+        refresh_token = str(tokens.get("refresh_token") or data[CONF_REFRESH_TOKEN])
+        if refresh_token != data[CONF_REFRESH_TOKEN]:
+            self.hass.config_entries.async_update_entry(
+                self.entry, data={**data, CONF_REFRESH_TOKEN: refresh_token}
+            )
+        try:
+            return await self.hass.async_add_executor_job(
+                collect_csas_snapshots, bank, tokens["access_token"], dt_util.now().date()
+            )
+        except CeskaSporitelnaError as err:
+            if err.status in (401, 403):
+                raise ConfigEntryAuthFailed("Česká spořitelna rejected the access token") from err
+            raise UpdateFailed("Česká spořitelna account request failed") from err
 
     def _collect_enable_banking(self) -> list[AccountSnapshot]:
         data: dict[str, Any] = self.entry.data

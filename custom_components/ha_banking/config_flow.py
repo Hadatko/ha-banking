@@ -33,10 +33,19 @@ from .const import (
     CONF_IMAP_USERNAME,
     CONF_KEY,
     CONF_PSU_TYPE,
+    CONF_REFRESH_TOKEN,
     CONF_SANDBOX,
     CONF_SESSION_ID,
     CONF_VALID_UNTIL,
+    CONF_WEB_API_KEY,
     DOMAIN,
+)
+from .csas import (
+    CeskaSporitelna,
+    CeskaSporitelnaError,
+    authorization_url,
+    bank_api_menu,
+    sign_in_menu,
 )
 from .lib.enable_banking import (
     EnableBanking,
@@ -49,6 +58,19 @@ from .lib.enable_banking import (
 from .mail import EmailLoginError, open_mailbox
 from .notices import BANK_PARSERS, configured_bank_folders, folder_field, format_account_names, parse_account_names
 from .oauth import AirBankOAuth2Implementation, authorization_state, home_assistant_redirect_uri
+
+CSAS_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_CLIENT_ID): str,
+        vol.Required(CONF_CLIENT_SECRET): selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+        ),
+        vol.Required(CONF_WEB_API_KEY): selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+        ),
+        vol.Required(CONF_SANDBOX, default=True): bool,
+    }
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -126,6 +148,7 @@ class AirBankConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
         self._credentials: dict[str, Any] = {}
         self._enable: dict[str, Any] = {}
         self._email: dict[str, Any] = {}
+        self._csas: dict[str, Any] = {}
         self._aspsp_names: list[str] = []
         self._enable_state: str | None = None
 
@@ -142,7 +165,15 @@ class AirBankConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         return self.async_show_menu(
             step_id="user",
-            menu_options=[AuthMethod.EMAIL, AuthMethod.ENABLE_BANKING, AuthMethod.DIRECT],
+            menu_options=list(sign_in_menu()),
+            description_placeholders={"redirect_uri": self._redirect_hint()},
+        )
+
+    async def async_step_bank_api(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Choose Air Bank or Česká spořitelna after the user picks a bank API."""
+        return self.async_show_menu(
+            step_id="bank_api",
+            menu_options=list(bank_api_menu()),
             description_placeholders={"redirect_uri": self._redirect_hint()},
         )
 
@@ -250,6 +281,75 @@ class AirBankConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
             )
         return self.async_external_step(step_id="enable_consent", url=url)
 
+    async def async_step_csas(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Collect the user's own Česká spořitelna application."""
+        if user_input is not None:
+            self._csas = _csas_credentials(user_input)
+            await self.async_set_unique_id(_csas_unique_id(self._csas))
+            self._abort_if_unique_id_configured()
+            return await self.async_step_csas_consent()
+        return self.async_show_form(
+            step_id="csas",
+            data_schema=CSAS_SCHEMA,
+            description_placeholders={"redirect_uri": self._redirect_hint()},
+        )
+
+    async def async_step_csas_consent(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            return await self._async_finish_csas(user_input)
+        url = authorization_url(
+            sandbox=bool(self._csas.get(CONF_SANDBOX)),
+            client_id=self._csas[CONF_CLIENT_ID],
+            redirect_uri=self._redirect_hint(),
+            state=authorization_state(self.hass, self.flow_id),
+        )
+        return self.async_external_step(step_id="csas_consent", url=url)
+
+    async def async_step_csas_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is None:
+            return self.async_show_form(
+                step_id="csas_reauth_confirm",
+                description_placeholders={"redirect_uri": self._redirect_hint()},
+            )
+        return await self.async_step_csas_consent()
+
+    async def _async_finish_csas(self, user_input: Mapping[str, Any]) -> ConfigFlowResult:
+        if user_input.get("error"):
+            reason = "user_rejected_authorize" if user_input["error"] == "access_denied" else "oauth_failed"
+            return self.async_abort(reason=reason)
+        code = user_input.get("code")
+        state = user_input.get("state") or {}
+        if not code or state.get("flow_id") != self.flow_id:
+            return self.async_abort(reason="oauth_error")
+        try:
+            refresh_token = await self.hass.async_add_executor_job(self._exchange_csas_code, code)
+        except CeskaSporitelnaError as err:
+            LOGGER.debug("Česká spořitelna login failed: %s", err)
+            reason = "oauth_failed" if err.status in (400, 401, 403) else "cannot_connect"
+            return self.async_abort(reason=reason)
+        updates = {CONF_REFRESH_TOKEN: refresh_token}
+        if self.source == SOURCE_REAUTH:
+            return self.async_update_reload_and_abort(self._get_reauth_entry(), data_updates=updates)
+        return self.async_create_entry(title="Česká spořitelna", data={**self._csas, **updates})
+
+    def _exchange_csas_code(self, code: str) -> str:
+        bank = CeskaSporitelna(
+            sandbox=bool(self._csas.get(CONF_SANDBOX)),
+            client_id=self._csas[CONF_CLIENT_ID],
+            client_secret=self._csas[CONF_CLIENT_SECRET],
+            web_api_key=self._csas[CONF_WEB_API_KEY],
+        )
+        tokens = bank.exchange_code(code, self._redirect_hint())
+        refresh_token = str(tokens.get("refresh_token") or "")
+        if not refresh_token:
+            raise CeskaSporitelnaError("Česká spořitelna did not return a refresh token")
+        bank.accounts(tokens["access_token"])
+        return refresh_token
+
     async def async_step_email(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -329,6 +429,9 @@ class AirBankConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
         if entry_data.get(CONF_AUTH_METHOD) == AuthMethod.ENABLE_BANKING:
             self._enable = _enable_credentials(entry_data)
             return await self.async_step_enable_reauth_confirm()
+        if entry_data.get(CONF_AUTH_METHOD) == AuthMethod.CSAS:
+            self._csas = _csas_credentials(entry_data)
+            return await self.async_step_csas_reauth_confirm()
         self._credentials = _direct_credentials(entry_data)
         return await self.async_step_reauth_confirm()
 
@@ -448,6 +551,21 @@ def _email_credentials(data: Mapping[str, Any]) -> dict[str, Any]:
         CONF_BANK_FOLDERS: configured_bank_folders(dict(data)),
         CONF_ACCOUNT_NAMES: parse_account_names(data.get(CONF_ACCOUNT_NAMES) or ""),
         CONF_MARK_SEEN: bool(data.get(CONF_MARK_SEEN, True)),
+    }
+
+
+def _csas_unique_id(data: Mapping[str, Any]) -> str:
+    environment = "sandbox" if data.get(CONF_SANDBOX) else "production"
+    return f"{data[CONF_CLIENT_ID]}:{environment}"
+
+
+def _csas_credentials(data: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        CONF_AUTH_METHOD: AuthMethod.CSAS,
+        CONF_CLIENT_ID: str(data[CONF_CLIENT_ID]).strip(),
+        CONF_CLIENT_SECRET: data[CONF_CLIENT_SECRET],
+        CONF_WEB_API_KEY: data[CONF_WEB_API_KEY],
+        CONF_SANDBOX: bool(data.get(CONF_SANDBOX, True)),
     }
 
 

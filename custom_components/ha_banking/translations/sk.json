@@ -119,13 +119,45 @@
         "title": "Znova pripojiť Air Bank"
       },
       "user": {
-        "description": "Posledná platba z e-mailov Air Bank, alebo Enable Banking, alebo licencovaný certifikát Air Bank. E-mailové avíza obsahujú dostupný zostatok po zmene. Zaúčtovaný zostatok ostáva prázdny. Z Home Assistanta sa platby neodosielajú.",
+        "description": "Vyber e-mailové avíza, Enable Banking alebo API banky. Pod API banky používa Air Bank licencovaný certifikát a Česká spořitelna aplikáciu z portálu Erste. Z Home Assistanta sa platby neodosielajú.",
         "menu_options": {
-          "direct": "Certifikát Air Bank",
+          "bank_api": "API banky",
           "email": "E-mailové avíza",
           "enable_banking": "Enable Banking"
         },
         "title": "Pripojiť banku"
+      },
+      "bank_api": {
+        "description": "Vyber banku. Každá banka používa vlastnú aplikáciu, uloženú len na tomto Home Assistantovi. Z Home Assistanta sa platby neodosielajú.",
+        "menu_options": {
+          "csas": "Česká spořitelna",
+          "direct": "Certifikát Air Bank"
+        },
+        "title": "API banky"
+      },
+      "csas": {
+        "data": {
+          "client_id": "Client ID",
+          "client_secret": "Client secret",
+          "sandbox": "Sandbox",
+          "web_api_key": "Web API kľúč"
+        },
+        "data_description": {
+          "client_id": "Client ID tvojej aplikácie Českej sporiteľne.",
+          "client_secret": "Client secret tejto aplikácie. Ostáva na tomto Home Assistantovi.",
+          "sandbox": "Použi sandbox Erste namiesto produkcie. Účty v sandboxe sú testovacie.",
+          "web_api_key": "Web API kľúč z tej istej aplikácie."
+        },
+        "description": "Použi vlastnú aplikáciu z portálu Erste, s Accounts API a rozsahom siblings.accounts. Ako návratovú adresu zaregistruj {redirect_uri}. Produkciu musí schváliť Česká spořitelna. Pri osobnom účte banka neúčtuje poplatok za Premium API. Z Home Assistanta sa platby neodosielajú.",
+        "title": "Česká spořitelna"
+      },
+      "csas_consent": {
+        "description": "Prihlás sa do George a povoľ tejto aplikácii čítať platobné účty.",
+        "title": "Prihlásenie do Českej sporiteľne"
+      },
+      "csas_reauth_confirm": {
+        "description": "Prihlás sa znova do George. Návratová adresa aplikácie musí byť {redirect_uri}.",
+        "title": "Znova pripojiť Českú sporiteľňu"
       }
     }
   },

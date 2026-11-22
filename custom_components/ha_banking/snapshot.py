@@ -205,6 +205,9 @@ def build_account_snapshot(
     balances: list[dict],
     transactions: list[dict],
     today: date | None = None,
+    institution: str = "Air Bank",
+    country: str = "CZ",
+    configuration_url: str = "https://ib.airbank.cz/",
 ) -> AccountSnapshot:
     """Turn one account payload into balances and the newest payment in each direction."""
     incoming = _first_payment(transactions, CreditDebit.CREDIT)
@@ -225,7 +228,9 @@ def build_account_snapshot(
         latest_incoming=incoming,
         latest_outgoing=outgoing,
         latest_status=latest_status,
-        logo_url=bank_logo_url("Air Bank", "CZ"),
+        institution=institution,
+        configuration_url=configuration_url,
+        logo_url=bank_logo_url(institution, country),
         payments=_api_payments(str(account["id"]), transactions),
         **totals,
     )

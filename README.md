@@ -2,7 +2,7 @@
 
 **Security is your responsibility.** The author does not accept liability for the security of this integration, for how you configure it, or for what happens to your mailbox, certificates, or bank data. Use it only if you are comfortable with that. Read the code and check it yourself, including with your own AI, before you connect a real account.
 
-Read-only Home Assistant integration for bank accounts. With a bank API it tracks booked and available balances, the latest incoming payment, the latest outgoing payment, and the status of the newest transaction. With email notices it tracks only the latest incoming and outgoing payment. Air Bank is the first bank with a direct API and an email parser. mBank is read from its daily E-mail Push summary. Enable Banking can connect other banks. Support for another bank can be added when someone asks for it or opens a pull request.
+Read-only Home Assistant integration for bank accounts. With a bank API it tracks booked and available balances, the latest incoming payment, the latest outgoing payment, and the status of the newest transaction. With email notices it tracks only the latest incoming and outgoing payment. Air Bank is the first bank with a direct API and an email parser. Česká spořitelna can also be read through its own API when the user brings an approved application. mBank is read from its daily E-mail Push summary. Enable Banking can connect other banks. Support for another bank can be added when someone asks for it or opens a pull request.
 
 It does not create or authorize payments.
 
@@ -14,20 +14,31 @@ Thank you ;)
 
 Setup offers three sign-in methods:
 
-- **Email notices.** Home Assistant reads Air Bank balance-change emails from your own mailbox. This does not require an account-information licence. It does not read the account balance.
+- **Email notices.** Home Assistant reads Air Bank, Česká spořitelna, and mBank notices from your own mailbox. This does not require an account-information licence. Air Bank and Česká spořitelna notices include the available balance. The booked balance is not in those mails.
 - **Enable Banking.** Each Home Assistant user registers their own Enable Banking application and connects only their own accounts. Enable Banking does not provide this service to a private person residing in the Czech Republic. Untested against the live service.
-- **Air Bank certificate.** Direct Open API access for an application that already has an account-information licence and a purchased PSD2 client certificate. Untested against the live API.
+- **Bank API.** The next step asks which bank. Air Bank uses a licensed certificate. Česká spořitelna uses the free Premium Accounts API for a personal account: the user creates an application on the Erste developer portal and signs in at George. Production access has to be approved by the bank. The sandbox uses the bank's test accounts. Untested against a live account.
 
-Enable Banking and the Air Bank certificate have automated tests with stand-in HTTP replies. Neither has been confirmed with a real account.
+Enable Banking, the Air Bank certificate, and the Česká spořitelna API have automated tests with stand-in HTTP replies. None of them has been confirmed with a real account.
 
 Enable Banking is untested because the service does not accept a private person who lives in the Czech Republic. The country list, the bank choice, and the sign-in redirect were never completed on the live site.
 
 The Air Bank certificate is untested because the Open API requires an account-information licence and a PSD2 client certificate bought from a trust service provider. That certificate was not purchased, so the live sign-in and the mutual TLS connection to Air Bank were never made.
 
+The Česká spořitelna API is untested against a live account because production access has to be approved by the bank for each application. The client is covered by tests that replay the documented account, balance, and transaction replies.
+
+### Česká spořitelna API
+
+1. On the Erste developer portal, create an application for Česká spořitelna and add Accounts API. Set the scope `siblings.accounts` to required. Enable the authorization code grant.
+2. Register the Home Assistant redirect URI shown in the form.
+3. In Home Assistant, choose Bank API, then Česká spořitelna. Enter the client ID, client secret, and web API key. Leave Sandbox on until the bank approves production.
+4. Sign in at George when Home Assistant opens the bank page.
+
+The integration reads payment accounts, booked and available balances, and transactions. It does not read mortgages, and it does not send payments. Email notices for Česká spořitelna stay available as a separate sign-in method.
+
 ## Requirements
 
 - Home Assistant 2025.5 or newer
-- The Home Assistant redirect URI registered on the chosen application, when using Enable Banking or the Air Bank certificate. It is the internet address from Settings → System → Network, with `/auth/external/callback` added at the end.
+- The Home Assistant redirect URI registered on the chosen application, when using Enable Banking or a bank API. It is the internet address from Settings → System → Network, with `/auth/external/callback` added at the end.
 - For email notices, IMAP access to the mailbox that receives those notices.
 
 ### Email notices
