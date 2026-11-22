@@ -58,6 +58,7 @@ class BankId(StrEnum):
 
     AIRBANK = "airbank"
     CSAS = "csas"
+    MBANK = "mbank"
 
 
 class SensorKey(StrEnum):

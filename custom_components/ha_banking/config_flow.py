@@ -265,7 +265,7 @@ class AirBankConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
             else:
                 await self.async_set_unique_id(credentials[CONF_IMAP_USERNAME].lower())
                 self._abort_if_unique_id_configured()
-                return self.async_create_entry(title="Air Bank", data=credentials)
+                return self.async_create_entry(title="Email notices", data=credentials)
         return self.async_show_form(step_id="email", data_schema=EMAIL_SCHEMA, errors=errors)
 
     async def async_step_email_reauth_confirm(

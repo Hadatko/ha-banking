@@ -50,6 +50,7 @@ class EmailLoginError(Exception):
     """The mailbox rejected the username or password."""
 
 
+
 def normalize_mailbox_password(password: str) -> str:
     """Drop the spaces Google inserts into a 16-letter app password."""
     text = str(password).strip()
@@ -81,14 +82,26 @@ def text_from_rfc822(raw: bytes) -> MailMessage:
         subject=str(message.get("Subject") or ""),
         body=_body_text(message),
         sent_at=sent_at,
+        html=_html_parts(message),
     )
 
 
 def open_mailbox(host: str, port: int, username: str, password: str, folders: list[str]) -> None:
-    """Log in and open each folder. Raises EmailLoginError when the password is rejected."""
+    """Log in and open each folder. Raises EmailLoginError when the password is rejected.
+
+    A missing folder is allowed while at least one other folder exists, so a user of
+    one bank does not need a folder for every registered bank.
+    """
+    missing: MailboxFolderNotFound | None = None
+    opened = False
     for folder in dict.fromkeys(folders):
-        with _mailbox(host, port, username, password, folder):
-            pass
+        try:
+            with _mailbox(host, port, username, password, folder):
+                opened = True
+        except MailboxFolderNotFound as err:
+            missing = err
+    if not opened and missing is not None:
+        raise missing
 
 
 def fetch_air_bank_messages(
@@ -177,6 +190,12 @@ def _body_text(message: Message) -> str:
     return "\n".join(_html_to_text(part) for part in html_parts)
 
 
+def _html_parts(message: Message) -> tuple[str, ...]:
+    """Raw HTML of every text/html part, attachments included. mBank puts its table in one."""
+    parts: Iterator[Message] = message.walk() if message.is_multipart() else iter((message,))
+    return tuple(_part_text(part) for part in parts if part.get_content_type() == "text/html")
+
+
 def _part_text(part: Message) -> str:
     try:
         content = part.get_content()
@@ -193,6 +212,13 @@ def _html_to_text(html: str) -> str:
     with_breaks = re.sub(r"(?i)<br\s*/?>|</p>", "\n", without_hidden)
     text = re.sub(r"<[^>]+>", " ", with_breaks)
     return unescape(text)
+
+
+def _quoted(folder: str) -> str:
+    """imaplib sends arguments as they are. A Gmail label with a space must be quoted."""
+    if len(folder) >= 2 and folder.startswith('"') and folder.endswith('"'):
+        return folder
+    return '"' + folder.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
 def _raw_message(status: str, fetched: list | None) -> bytes | None:
@@ -221,7 +247,7 @@ def _mailbox(
             reason = imap_error_text(err)
             LOGGER.warning("Mailbox %s rejected the login: %s", host, reason)
             raise EmailLoginError(reason or "Mailbox rejected the username or password") from err
-        status, _ = client.select(folder, readonly=readonly)
+        status, _ = client.select(_quoted(folder), readonly=readonly)
         if status != "OK":
             raise MailboxFolderNotFound("Mailbox folder was not found")
         yield client

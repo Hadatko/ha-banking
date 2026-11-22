@@ -303,7 +303,7 @@ def test_marks_only_the_parsed_notice_as_read() -> None:
 
     @contextmanager
     def connect(host, port, username, password, folder, readonly=True):
-        assert folder in {"airbank", "sporitelna"}
+        assert folder in {"airbank", "sporitelna", "mbank"}
         assert readonly is False
         yield mailbox
 
@@ -424,8 +424,11 @@ def test_csas_outgoing_notice_reads_the_sent_payment() -> None:
         "OR",
         "FROM",
         "info@airbank.cz",
+        "OR",
         "FROM",
         "ceskasporitelna@csas.cz",
+        "FROM",
+        "kontakt@mbank.cz",
     ]
 
 
@@ -476,7 +479,7 @@ def test_a_missing_bank_folder_does_not_stop_the_other_bank() -> None:
         {"airbank": "airbank", "csas": "sporitelna"},
         connect=connect,
     )
-    assert opened == ["airbank", "sporitelna"]
+    assert opened == ["airbank", "sporitelna", "mbank"]
 
 
 def test_leaves_mail_unread_when_marking_is_off() -> None:
