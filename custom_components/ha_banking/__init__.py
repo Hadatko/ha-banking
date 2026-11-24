@@ -6,11 +6,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.config_entry_oauth2_flow import OAuth2Session
+from homeassistant.helpers.typing import ConfigType
 
 from .config_flow import AirBankConfigFlow, implementation_from_entry
 from .const import AuthMethod, CONF_AUTH_METHOD, CONF_IMAP_HOST, CONF_IMAP_USERNAME, CONF_LARGE_PAYMENT, CONF_LOW_BALANCE
 from .coordinator import AirBankCoordinator
-from .dashboard import async_setup_dashboard
+from .dashboard import async_notify_missing_cards, async_setup_services
 from .payments import (
     known_payments,
     low_balance_alerted,
@@ -24,6 +25,12 @@ from .payments import (
 PLATFORMS = [Platform.SENSOR]
 
 type AirBankConfigEntry = ConfigEntry[AirBankCoordinator]
+
+
+async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
+    """Register the dashboard action. Dashboards are not created or changed here."""
+    await async_setup_services(hass)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AirBankConfigEntry) -> bool:
@@ -59,15 +66,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirBankConfigEntry) -> b
         minimum, low = _limits()
         publish_new_payments(hass, coordinator.data or [], minimum)
         publish_low_balance(hass, coordinator.data or [], low)
-        hass.async_create_task(async_setup_dashboard(hass))
-
-    async def _options_updated(hass: HomeAssistant, _entry: ConfigEntry) -> None:
-        await async_setup_dashboard(hass)
 
     entry.async_on_unload(coordinator.async_add_listener(_on_update))
-    entry.async_on_unload(entry.add_update_listener(_options_updated))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    await async_setup_dashboard(hass)
+    await async_notify_missing_cards(hass)
     if cached:
         entry.async_create_background_task(hass, coordinator.async_refresh(), f"{entry.entry_id} mailbox sync")
     return True

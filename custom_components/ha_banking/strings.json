@@ -241,14 +241,16 @@
       }
     }
   },
+  "services": {
+    "get_dashboard": {
+      "name": "Get dashboard",
+      "description": "Return the dashboard configuration for the current accounts as YAML. Paste it into a dashboard yourself. This action does not change any dashboard."
+    }
+  },
   "issues": {
     "dashboard_missing_cards": {
       "title": "The HA Banking dashboard needs cards",
       "description": "Install {cards} from HACS or the Home Assistant Marketplace, then reload the page. This integration does not install cards."
-    },
-    "dashboard_missing": {
-      "title": "Create the HA Banking dashboard",
-      "description": "There is no dashboard with the URL path ha-banking. Create one under Settings, Dashboards, or add the example from the integration README. This integration fills a storage dashboard at that path and does not create one itself."
     }
   }
 }

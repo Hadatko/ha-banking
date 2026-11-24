@@ -241,14 +241,16 @@
       }
     }
   },
+  "services": {
+    "get_dashboard": {
+      "name": "Získat nástěnku",
+      "description": "Vrátí konfiguraci nástěnky pro aktuální účty jako YAML. Vložte ji do nástěnky sami. Tato akce žádnou nástěnku nezmění."
+    }
+  },
   "issues": {
     "dashboard_missing_cards": {
       "title": "Dashboard HA Banking potřebuje karty",
       "description": "Nainstalujte {cards} z HACS nebo z Marketu Home Assistantu a potom obnovte stránku. Tato integrace karty neinstaluje."
-    },
-    "dashboard_missing": {
-      "title": "Vytvořte dashboard HA Banking",
-      "description": "Chybí dashboard s URL cestou ha-banking. Vytvořte ho v Nastavení, Nástěnky, nebo přidejte příklad z README integrace. Integrace doplní obsah do úložného dashboardu s touto cestou a sama ho nevytváří."
     }
   }
 }

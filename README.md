@@ -148,9 +148,11 @@ Each account becomes one device with these sensors. Every sensor shows that bank
 
 ## Dashboard
 
-HA Banking fills a sidebar dashboard, and it does not create one. Home Assistant has no public API an integration can use to add a dashboard.
+HA Banking does not create a dashboard and does not change one you already have.
 
-In **Settings → Dashboards → Add dashboard**, choose **New dashboard from scratch**. Set the title to `HA Banking`, the URL path to `ha-banking`, and show it in the sidebar. On the next refresh the integration writes the views into that storage dashboard. The first tab, Overview, adds up every account: the total available balance (accounts in another currency are listed beside it), this month and this year, the payments of all accounts by date, and the monthly charts. The sums and charts use the currency most accounts have. Then there is one tab per account: balance with a 30-day sparkline, this month and this year (net, incoming, outgoing), recent payments, the balance at each month end, and incoming and outgoing by month for the last 13 months. Tap a row to open its sensor. The monthly charts come from the `months` attribute of the recent payments sensor, so they show the history at once.
+The views are built from your accounts. In **Developer tools → Actions**, run **HA Banking: Get dashboard**. The response is YAML for the current accounts. Create a dashboard and paste that YAML into its raw configuration editor. When you add an account, run the action again and paste the new YAML yourself.
+
+The first tab, Overview, adds up every account: the total available balance (accounts in another currency are listed beside it), this month and this year, the payments of all accounts by date, and the monthly charts. The sums and charts use the currency most accounts have. Then there is one tab per account: balance with a 30-day sparkline, this month and this year (net, incoming, outgoing), recent payments, the balance at each month end, and incoming and outgoing by month for the last 13 months. Tap a row to open its sensor. The monthly charts come from the `months` attribute of the recent payments sensor, so they show the history at once.
 
 Install these cards yourself from HACS or the Home Assistant Marketplace before opening the dashboard. A repair lists any that are missing. The integration does not download or install them:
 
@@ -158,7 +160,7 @@ Install these cards yourself from HACS or the Home Assistant Marketplace before 
 - [stack-in-card](https://github.com/custom-cards/stack-in-card)
 - [mini-graph-card](https://github.com/kalkih/mini-graph-card)
 
-To keep the dashboard in YAML instead, add a view like the one below and replace the entity id with the available-balance sensor of an account. A YAML dashboard is not updated when accounts change.
+The example below is only the shape of one section. Replace the entity id, or use the YAML from the action above, which already names your sensors.
 
 ```yaml
 title: HA Banking

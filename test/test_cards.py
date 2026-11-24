@@ -49,24 +49,9 @@ async def test_check_cards_opens_a_repair_without_installing(
     assert "stack-in-card" in issue.translation_placeholders["cards"]
 
 
-async def test_dashboard_is_not_created_from_lovelace_internals(
+async def test_get_dashboard_returns_yaml_and_writes_nothing(
     hass: HomeAssistant, lovelace: Any
 ) -> None:
-    called: list[object] = []
-
-    def handler(*args: object) -> None:
-        called.append(args)
-
-    hass.data["websocket_api"] = {"lovelace/dashboards/create": (handler, None)}
-    await dashboard.async_setup_dashboard(hass)
-    assert called == []
-    assert dashboard.DASHBOARD_PATH not in hass.data[LOVELACE_DATA].dashboards
-    issue = ir.async_get(hass).async_get_issue(DOMAIN, dashboard.ISSUE_DASHBOARD)
-    assert issue is not None
-    assert issue.is_fixable is False
-
-
-async def test_existing_dashboard_is_filled(hass: HomeAssistant, lovelace: Any) -> None:
     class Store:
         def __init__(self) -> None:
             self.config: dict | None = None
@@ -75,8 +60,16 @@ async def test_existing_dashboard_is_filled(hass: HomeAssistant, lovelace: Any) 
             self.config = config
 
     store = Store()
-    hass.data[LOVELACE_DATA].dashboards[dashboard.DASHBOARD_PATH] = store
-    await dashboard.async_setup_dashboard(hass)
-    assert store.config is not None
-    assert store.config["views"][0]["cards"][0]["content"]
-    assert ir.async_get(hass).async_get_issue(DOMAIN, dashboard.ISSUE_DASHBOARD) is None
+    hass.data[LOVELACE_DATA].dashboards["ha-banking"] = store
+    await dashboard.async_setup_services(hass)
+    response = await hass.services.async_call(
+        DOMAIN,
+        dashboard.SERVICE_GET_DASHBOARD,
+        {},
+        blocking=True,
+        return_response=True,
+    )
+    assert "views:" in response["yaml"]
+    assert "No accounts yet." in response["yaml"]
+    assert store.config is None
+    assert not hasattr(dashboard, "_save_dashboard")

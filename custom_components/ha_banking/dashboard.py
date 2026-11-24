@@ -4,18 +4,19 @@ One view (tab) per account. Each section is a heading and a stack-in-card: a but
 head (title, side note, large value) above button-card rows that open the entity on tap.
 The balance has a mini-graph-card sparkline. The monthly charts are bars drawn by
 button-card from the "months" attribute of the recent payments sensor. The user installs
-button-card, stack-in-card and mini-graph-card. This module writes views only into a
-dashboard that already exists at DASHBOARD_PATH.
+button-card, stack-in-card and mini-graph-card and pastes the generated YAML. This module
+does not create or change a dashboard.
 """
 
 from __future__ import annotations
 
 import json
-import logging
 import re
 
-from homeassistant.core import HomeAssistant
+import yaml
+from homeassistant.core import HomeAssistant, ServiceResponse, SupportsResponse
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.service import async_register_admin_service
 
 from .cards import async_missing_cards
 from .const import (
@@ -24,13 +25,9 @@ from .const import (
     SensorKey,
 )
 
-LOGGER = logging.getLogger(__name__)
-
-DASHBOARD_PATH = "ha-banking"
-DASHBOARD_VERSION = 14
 OVERVIEW_PATH = "overview"
 ISSUE_CARDS = "dashboard_missing_cards"
-ISSUE_DASHBOARD = "dashboard_missing"
+SERVICE_GET_DASHBOARD = "get_dashboard"
 HEAD = "ha_banking_head"
 DETAILS = "ha_banking_details"
 PAYMENT_ROWS = 15
@@ -654,38 +651,34 @@ def _overview(accounts: list[dict], copy: dict) -> dict:
     }
 
 
-async def async_setup_dashboard(hass: HomeAssistant) -> None:
-    """Update an existing HA Banking dashboard from the current sensors."""
-    accounts = _accounts(hass)
-    store = hass.data.setdefault(DOMAIN, {})
-    language = hass.config.language or "en"
-    signature = (
-        DASHBOARD_VERSION,
-        language,
-        tuple((account["name"], tuple(sorted(account["sensors"].items()))) for account in accounts),
+async def async_setup_services(hass: HomeAssistant) -> None:
+    """Register the action that returns dashboard YAML. It does not write a dashboard."""
+
+    async def get_dashboard(_call: object) -> ServiceResponse:
+        return {"yaml": dashboard_yaml(hass)}
+
+    async_register_admin_service(
+        hass,
+        DOMAIN,
+        SERVICE_GET_DASHBOARD,
+        get_dashboard,
+        supports_response=SupportsResponse.ONLY,
     )
-    if store.get("dashboard_signature") == signature:
-        return
-    if await _save_dashboard(hass, build_dashboard(accounts, language)):
-        store["dashboard_signature"] = signature
-        store.pop("dashboard_missing_logged", None)
-        ir.async_delete_issue(hass, DOMAIN, ISSUE_DASHBOARD)
-    else:
-        ir.async_create_issue(
-            hass,
-            DOMAIN,
-            ISSUE_DASHBOARD,
-            is_fixable=False,
-            severity=ir.IssueSeverity.WARNING,
-            translation_key=ISSUE_DASHBOARD,
-        )
-        if not store.get("dashboard_missing_logged"):
-            LOGGER.info(
-                "No dashboard with URL path %s yet. Create one so the views can be saved",
-                DASHBOARD_PATH,
-            )
-            store["dashboard_missing_logged"] = True
-    if accounts:
+
+
+def dashboard_yaml(hass: HomeAssistant) -> str:
+    """YAML for the current accounts, for the user to paste into a dashboard."""
+    language = getattr(hass.config, "language", None) or "en"
+    return yaml.safe_dump(
+        build_dashboard(_accounts(hass), language),
+        allow_unicode=True,
+        sort_keys=False,
+    )
+
+
+async def async_notify_missing_cards(hass: HomeAssistant) -> None:
+    """List missing cards once the account sensors exist. Nothing is installed."""
+    if _accounts(hass):
         await async_check_cards(hass)
 
 
@@ -723,15 +716,3 @@ def _accounts(hass: HomeAssistant) -> list[dict]:
         account = grouped.setdefault(entry.device_id or name, {"name": name, "sensors": {}})
         account["sensors"][entry.translation_key] = entry.entity_id
     return sorted(grouped.values(), key=lambda account: account["name"])
-
-
-async def _save_dashboard(hass: HomeAssistant, config: dict) -> bool:
-    """Write views into a dashboard the user already created. There is no public create API."""
-    from homeassistant.components.lovelace.const import LOVELACE_DATA
-
-    lovelace = hass.data.get(LOVELACE_DATA)
-    dashboard = None if lovelace is None else lovelace.dashboards.get(DASHBOARD_PATH)
-    if dashboard is None or not hasattr(dashboard, "async_save"):
-        return False
-    await dashboard.async_save(config)
-    return True
