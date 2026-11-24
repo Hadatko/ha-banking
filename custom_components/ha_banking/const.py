@@ -101,7 +101,6 @@ CONF_MARK_SEEN = "mark_seen"
 CONF_ACCOUNT_NAMES = "account_names"
 CONF_LARGE_PAYMENT = "large_payment"
 CONF_LOW_BALANCE = "low_balance"
-CONF_INSTALL_CARDS = "install_cards"
 SCAN_INTERVAL = timedelta(minutes=15)
 BOOKED_BALANCE_TYPES = (BalanceType.CLBD, BalanceType.ITBD, BalanceType.PRCD)
 AVAILABLE_BALANCE_TYPES = (BalanceType.CLAV, BalanceType.ITAV, BalanceType.XPCD, BalanceType.FWAV)

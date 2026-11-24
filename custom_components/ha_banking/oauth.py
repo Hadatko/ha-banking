@@ -58,6 +58,7 @@ class AirBankOAuth2Implementation(LocalOAuth2Implementation):
         self.sandbox = sandbox
         self.client_cert = data[CONF_CERT]
         self.client_key = data[CONF_KEY]
+        self._ssl_context: ssl.SSLContext | None = None
 
     @property
     def name(self) -> str:
@@ -78,13 +79,26 @@ class AirBankOAuth2Implementation(LocalOAuth2Implementation):
             )
         )
 
+    async def _client_ssl(self) -> ssl.SSLContext:
+        """Load the client certificate once, off the event loop, and reuse it."""
+        if self._ssl_context is None:
+            cert = self.client_cert
+            key = self.client_key
+
+            def build() -> ssl.SSLContext:
+                context = ssl.create_default_context()
+                context.load_cert_chain(cert, key)
+                return context
+
+            self._ssl_context = await self.hass.async_add_executor_job(build)
+        return self._ssl_context
+
     async def _token_request(self, data: dict) -> dict:
         payload = dict(data)
         payload["client_id"] = self.client_id
         if self.client_secret:
             payload["client_secret"] = self.client_secret
-        context = ssl.create_default_context()
-        context.load_cert_chain(self.client_cert, self.client_key)
+        context = await self._client_ssl()
         async with ClientSession() as session:
             response = await session.post(self.token_url, json=payload, ssl=context)
             if response.status >= 400:

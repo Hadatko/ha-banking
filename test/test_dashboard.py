@@ -126,6 +126,17 @@ def test_counterparty_text_is_escaped() -> None:
     assert "${p.counterparty}" not in text
 
 
+def test_bank_supplied_text_is_escaped() -> None:
+    config = build_dashboard([_account("Savings")], "en")
+    text = json.dumps(config)
+    assert "${esc(u)}" in text
+    assert "esc(st.state)" in text
+    assert "esc(x.currency||'')" in text
+    assert "esc(cur(" in text
+    assert "unitHtml=esc(unit)" in text
+    assert "+(x.currency||'')" not in text
+
+
 def test_dashboard_without_accounts_is_an_empty_view() -> None:
     config = build_dashboard([], "en")
     assert config["views"][0]["cards"][0]["content"] == "No accounts yet."

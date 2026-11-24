@@ -3,9 +3,9 @@
 One view (tab) per account. Each section is a heading and a stack-in-card: a button-card
 head (title, side note, large value) above button-card rows that open the entity on tap.
 The balance has a mini-graph-card sparkline. The monthly charts are bars drawn by
-button-card from the "months" attribute of the recent payments sensor. The custom
-cards (button-card, stack-in-card, mini-graph-card) are installed with the user's consent,
-see cards.py.
+button-card from the "months" attribute of the recent payments sensor. The user installs
+button-card, stack-in-card and mini-graph-card. This module writes views only into a
+dashboard that already exists at DASHBOARD_PATH.
 """
 
 from __future__ import annotations
@@ -17,9 +17,8 @@ import re
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 
-from .cards import async_install_cards, async_missing_cards
+from .cards import async_missing_cards
 from .const import (
-    CONF_INSTALL_CARDS,
     DOMAIN,
     Direction,
     SensorKey,
@@ -28,9 +27,10 @@ from .const import (
 LOGGER = logging.getLogger(__name__)
 
 DASHBOARD_PATH = "ha-banking"
-DASHBOARD_VERSION = 13
+DASHBOARD_VERSION = 14
 OVERVIEW_PATH = "overview"
 ISSUE_CARDS = "dashboard_missing_cards"
+ISSUE_DASHBOARD = "dashboard_missing"
 HEAD = "ha_banking_head"
 DETAILS = "ha_banking_details"
 PAYMENT_ROWS = 15
@@ -149,7 +149,7 @@ const cur=(k)=>{const s=so(k);return (s&&s.attributes.unit_of_measurement)||''};
 const at=(k,a)=>{const s=so(k);return s?s.attributes[a]:undefined};
 const dt=(v)=>v?String(v).slice(0,10).split('-').reverse().join('.'):'–';
 const esc=(t)=>String(t??'').replace(/[&<>"']/g,(c)=>'&#'+c.charCodeAt(0)+';');
-const uu=(v,u)=>`${v}<span class='u'>${u}</span>`;
+const uu=(v,u)=>`${v}<span class='u'>${esc(u)}</span>`;
 const sg=(v,d=2)=>{const n=parseFloat(v);return isNaN(n)?'–':(n>0?'+':(n<0?'−':''))+fm(Math.abs(n),d)};
 const tone=(v,dir)=>{const n=parseFloat(v);const inc=dir?dir==='%INCOMING%':n>0;return isNaN(n)||n===0?'':(inc?'in':'out')};
 const row=(k,l,v,c='')=>`<div class='r' data-k='${esc(k)}' onclick='hbTap(event,this)' ontouchstart='hbTs(event)' ontouchend='hbTe(event,this)'><span class='l'>${l}</span><span class='${c}'>${v}</span></div>`;
@@ -157,13 +157,14 @@ const MN=%MONTH_NAMES%;
 const mlab=(ym)=>{const [y,m]=String(ym).split('-');return MN[+m-1]+(+m===1?' '+y.slice(2):'')};
 const mfull=(ym)=>{const [y,m]=String(ym).split('-');return MN[+m-1]+' '+y};
 const chart=(groups,legend,unit)=>{
+const unitHtml=esc(unit);
 const max=Math.max(1,...groups.flatMap(g=>g.b.map(x=>Math.max(0,x.v||0))));
-const val=(v)=>v==null?'–':fm(v,0)+' '+unit;
+const val=(v)=>v==null?'–':fm(v,0)+' '+unitHtml;
 const cols=groups.map(g=>{
 const tt=`<div class='th'>${esc(g.h)}</div>`+g.b.map(x=>`<div class='tr'><span><i style='background:${x.c}'></i>${esc(x.n)}</span><span>${val(x.v)}</span></div>`).join('')+(g.x||[]).map(e=>`<div class='tx'>${esc(e)}</div>`).join('');
 return `<div class='cc' data-tip='${encodeURIComponent(tt).replace(/'/g,'%27')}' onmouseenter='hbTip(event,this,1)' onmouseleave='hbTip(event,this,0)' onclick='hbTip(event,this,1)'><div class='cb'>${g.b.map(x=>`<div class='bar' style='height:${Math.round(Math.max(0,x.v||0)/max*100)}%;background:${x.c}'></div>`).join('')}</div><div class='cl'>${g.l}</div></div>`}).join('');
 const leg=legend.map(([c,t])=>`<span class='lg'><i style='background:${c}'></i>${t}</span>`).join('');
-return `<div class='chw'><div class='mx'>max ${fm(max,0)} ${unit}</div><div class='tip'></div><div class='ch'>${cols}</div><div class='lgs'>${leg}</div></div>`};
+return `<div class='chw'><div class='mx'>max ${fm(max,0)} ${unitHtml}</div><div class='tip'></div><div class='ch'>${cols}</div><div class='lgs'>${leg}</div></div>`};
 const L=%LABELS%;
 const mchart=(ms,u)=>chart(ms.map(m=>({l:mlab(m.month),h:mfull(m.month),b:[{v:m.incoming,c:'%INCOMING_COLOR%',n:L.incoming},{v:m.outgoing,c:'%OUTGOING_COLOR%',n:L.outgoing}],x:[L.net+' '+sg(m.net,0)+' '+u]})),[['%INCOMING_COLOR%',L.incoming],['%OUTGOING_COLOR%',L.outgoing]],u);
 const bchart=(ms,u)=>chart(ms.map(m=>({l:mlab(m.month),h:mfull(m.month),b:[{v:m.balance,c:'%BALANCE_COLOR%',n:L.balance_months}]})),[['%BALANCE_COLOR%',L.balance_months]],u);
@@ -376,9 +377,9 @@ def _balance_section(sensors: dict, copy: dict, js: str) -> dict | None:
     rows = _field(
         js,
         f"let h='';"
-        f"if(ok({b}))h+=row({b},{json.dumps(copy['booked'])},num({b})+' '+cur({b}));"
+        f"if(ok({b}))h+=row({b},{json.dumps(copy['booked'])},num({b})+' '+esc(cur({b})));"
         f"const st=so({s});"
-        f"if(st&&!['unknown','unavailable',''].includes(st.state))h+=row({s},{json.dumps(copy['status'])},st.state);"
+        f"if(st&&!['unknown','unavailable',''].includes(st.state))h+=row({s},{json.dumps(copy['status'])},esc(st.state));"
         f"return h;",
     )
     graph = {
@@ -421,8 +422,8 @@ def _period_section(sensors: dict, copy: dict, js: str, period: str, icon: str) 
     rows = _field(
         js,
         f"let h='';"
-        f"if(so({i}))h+=row({i},{json.dumps(copy['incoming'])},sg(so({i}).state)+' '+cur({i}),'in');"
-        f"if(so({o}))h+=row({o},{json.dumps(copy['outgoing'])},sg(-parseFloat(so({o}).state))+' '+cur({o}));"
+        f"if(so({i}))h+=row({i},{json.dumps(copy['incoming'])},sg(so({i}).state)+' '+esc(cur({i})),'in');"
+        f"if(so({o}))h+=row({o},{json.dumps(copy['outgoing'])},sg(-parseFloat(so({o}).state))+' '+esc(cur({o})));"
         f"return h;",
     )
     head = _head(main, icon, copy["net"], value)
@@ -435,7 +436,7 @@ def _payments_section(sensors: dict, copy: dict, js: str) -> dict | None:
         return None
     r = json.dumps(recent)
     inc = json.dumps(str(Direction.INCOMING))
-    amount = "(x)=>{const v=parseFloat(x.amount)*(x.direction===" + inc + "?1:-1);return sg(v)+' '+(x.currency||'')}"
+    amount = "(x)=>{const v=parseFloat(x.amount)*(x.direction===" + inc + "?1:-1);return sg(v)+' '+esc(x.currency||'')}"
     extra = _field(js, f"const p=(at({r},'payments')||[])[0];return p?dt(p.booked):'';")
     value = _field(
         js,
@@ -528,7 +529,7 @@ _OVERVIEW_JS = (
     "return Object.values(m).sort((x,y)=>x.month<y.month?-1:1)}})();"
     "const PS=A.flatMap(a=>(at(a.r,'payments')||[]).map(p=>({{...p,acc:a.n,src:a.r}})))"
     ".sort((x,y)=>String(y.booked||'').localeCompare(String(x.booked||'')));"
-    "const am=(x)=>sg(parseFloat(x.amount)*(x.direction==='{incoming}'?1:-1))+' '+(x.currency||'');"
+    "const am=(x)=>sg(parseFloat(x.amount)*(x.direction==='{incoming}'?1:-1))+' '+esc(x.currency||'');"
 )
 
 
@@ -559,7 +560,7 @@ def _overview(accounts: list[dict], copy: dict) -> dict:
         _field(js, f"return A.length+' '+{accounts_label};"),
     )
     balance_rows = _details(
-        _field(js, "return A.filter(a=>a.a).map(a=>row(a.a,esc(a.n),num(a.a)+' '+cur(a.a))).join('');")
+        _field(js, "return A.filter(a=>a.a).map(a=>row(a.a,esc(a.n),num(a.a)+' '+esc(cur(a.a)))).join('');")
     )
 
     def period(net: str, inc: str, out: str, key: str, icon: str) -> dict:
@@ -572,9 +573,9 @@ def _overview(accounts: list[dict], copy: dict) -> dict:
         rows = _details(
             _field(
                 js,
-                f"return row(A[0].{inc}||A[0].a,{json.dumps(copy['incoming'])},sg(sum('{inc}'))+' '+CUR,'in')"
-                f"+row(A[0].{out}||A[0].a,{json.dumps(copy['outgoing'])},sg(-sum('{out}'))+' '+CUR)"
-                f"+AC.filter(a=>a.{net}).map(a=>row(a.{net},esc(a.n),sg(val(a.{net}))+' '+CUR,"
+                f"return row(A[0].{inc}||A[0].a,{json.dumps(copy['incoming'])},sg(sum('{inc}'))+' '+esc(CUR),'in')"
+                f"+row(A[0].{out}||A[0].a,{json.dumps(copy['outgoing'])},sg(-sum('{out}'))+' '+esc(CUR))"
+                f"+AC.filter(a=>a.{net}).map(a=>row(a.{net},esc(a.n),sg(val(a.{net}))+' '+esc(CUR),"
                 f"tone(val(a.{net})))).join('');",
             )
         )
@@ -614,7 +615,7 @@ def _overview(accounts: list[dict], copy: dict) -> dict:
     months_rows = _details(
         _field(
             js,
-            f"const n=AC.length<A.length?`<div class='e'>${{{note}.replace('{{cur}}',CUR)}}</div>`:'';"
+            f"const n=AC.length<A.length?`<div class='e'>${{{note}.replace('{{cur}}',esc(CUR))}}</div>`:'';"
             "return mchart(MS,CUR)+n;",
         )
     )
@@ -654,7 +655,7 @@ def _overview(accounts: list[dict], copy: dict) -> dict:
 
 
 async def async_setup_dashboard(hass: HomeAssistant) -> None:
-    """Create or update the HA Banking dashboard from the current sensors."""
+    """Update an existing HA Banking dashboard from the current sensors."""
     accounts = _accounts(hass)
     store = hass.data.setdefault(DOMAIN, {})
     language = hass.config.language or "en"
@@ -665,35 +666,44 @@ async def async_setup_dashboard(hass: HomeAssistant) -> None:
     )
     if store.get("dashboard_signature") == signature:
         return
-    await _save_dashboard(hass, build_dashboard(accounts, language))
-    store["dashboard_signature"] = signature
+    if await _save_dashboard(hass, build_dashboard(accounts, language)):
+        store["dashboard_signature"] = signature
+        store.pop("dashboard_missing_logged", None)
+        ir.async_delete_issue(hass, DOMAIN, ISSUE_DASHBOARD)
+    else:
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            ISSUE_DASHBOARD,
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key=ISSUE_DASHBOARD,
+        )
+        if not store.get("dashboard_missing_logged"):
+            LOGGER.info(
+                "No dashboard with URL path %s yet. Create one so the views can be saved",
+                DASHBOARD_PATH,
+            )
+            store["dashboard_missing_logged"] = True
     if accounts:
         await async_check_cards(hass)
 
 
 async def async_check_cards(hass: HomeAssistant) -> None:
-    """Install missing cards when allowed, otherwise raise a fixable repair issue."""
+    """Raise a repair that names the cards the user still has to install."""
     missing = await async_missing_cards(hass)
-    if missing and _install_allowed(hass):
-        await async_install_cards(hass, missing)
-        missing = await async_missing_cards(hass)
     if missing:
         ir.async_create_issue(
             hass,
             DOMAIN,
             ISSUE_CARDS,
-            is_fixable=True,
+            is_fixable=False,
             severity=ir.IssueSeverity.WARNING,
             translation_key=ISSUE_CARDS,
             translation_placeholders={"cards": ", ".join(missing)},
         )
     else:
         ir.async_delete_issue(hass, DOMAIN, ISSUE_CARDS)
-
-
-def _install_allowed(hass: HomeAssistant) -> bool:
-    entries = hass.config_entries.async_entries(DOMAIN)
-    return any(entry.options.get(CONF_INSTALL_CARDS, True) for entry in entries)
 
 
 def _accounts(hass: HomeAssistant) -> list[dict]:
@@ -715,39 +725,13 @@ def _accounts(hass: HomeAssistant) -> list[dict]:
     return sorted(grouped.values(), key=lambda account: account["name"])
 
 
-async def _save_dashboard(hass: HomeAssistant, config: dict) -> None:
-    collection = _live_dashboard_collection(hass)
-    if collection is None:
-        LOGGER.warning("Home Assistant has no Lovelace dashboard collection yet")
-        return
-    from homeassistant.components.lovelace.const import CONF_ICON, CONF_TITLE, CONF_URL_PATH, LOVELACE_DATA
+async def _save_dashboard(hass: HomeAssistant, config: dict) -> bool:
+    """Write views into a dashboard the user already created. There is no public create API."""
+    from homeassistant.components.lovelace.const import LOVELACE_DATA
 
-    existing = next(
-        (item for item in collection.async_items() if item.get(CONF_URL_PATH) == DASHBOARD_PATH),
-        None,
-    )
-    if existing is None:
-        await collection.async_create_item(
-            {
-                CONF_ICON: "mdi:bank",
-                CONF_TITLE: "HA Banking",
-                CONF_URL_PATH: DASHBOARD_PATH,
-            }
-        )
-    dashboard = hass.data[LOVELACE_DATA].dashboards.get(DASHBOARD_PATH)
-    if dashboard is None:
-        return
+    lovelace = hass.data.get(LOVELACE_DATA)
+    dashboard = None if lovelace is None else lovelace.dashboards.get(DASHBOARD_PATH)
+    if dashboard is None or not hasattr(dashboard, "async_save"):
+        return False
     await dashboard.async_save(config)
-
-
-def _live_dashboard_collection(hass: HomeAssistant):
-    """The Lovelace collection that is already listening for new dashboards."""
-    handlers = hass.data.get("websocket_api") or {}
-    registered = handlers.get("lovelace/dashboards/create")
-    if not registered:
-        return None
-    handler = registered[0]
-    wrapped = getattr(handler, "__wrapped__", None)
-    method = getattr(wrapped, "__wrapped__", None)
-    owner = getattr(method, "__self__", None)
-    return getattr(owner, "storage_collection", None)
+    return True

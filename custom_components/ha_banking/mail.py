@@ -14,6 +14,8 @@ import logging
 import re
 from html import unescape
 
+from homeassistant.util.ssl import client_context
+
 from .notices import (
     BANK_PARSERS,
     MailMessage,
@@ -384,7 +386,7 @@ def _mailbox(
     folder: str,
     readonly: bool = True,
 ) -> Iterator[imaplib.IMAP4_SSL]:
-    client = imaplib.IMAP4_SSL(host, int(port))
+    client = imaplib.IMAP4_SSL(host, int(port), ssl_context=client_context())
     try:
         try:
             client.login(username, normalize_mailbox_password(password))

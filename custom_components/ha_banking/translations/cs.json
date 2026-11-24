@@ -222,13 +222,11 @@
       "init": {
         "data": {
           "large_payment": "Minimální částka platby",
-          "low_balance": "Nízký dostupný zůstatek",
-          "install_cards": "Instalovat karty dashboardu"
+          "low_balance": "Nízký dostupný zůstatek"
         },
         "data_description": {
           "large_payment": "Platbu oznámit jen tehdy, když je její částka alespoň toto číslo. Prázdné pole oznámí každou novou platbu.",
-          "low_balance": "Oznámit jednou, když dostupný zůstatek klesne pod toto číslo. Znovu se oznámí, až když zůstatek stoupne nad něj. Prázdné pole toto vypne.",
-          "install_cards": "Chybějící karty button-card, stack-in-card a mini-graph-card pro dashboard HA Banking se nainstalují z Marketu Home Assistantu nebo z HACS, jinak z jejich vydání na GitHubu."
+          "low_balance": "Oznámit jednou, když dostupný zůstatek klesne pod toto číslo. Znovu se oznámí, až když zůstatek stoupne nad něj. Prázdné pole toto vypne."
         },
         "description": "Tato upozornění jsou volitelná. Událost o platbě se odešle při každé nové platbě.",
         "title": "Upozornění"
@@ -246,17 +244,11 @@
   "issues": {
     "dashboard_missing_cards": {
       "title": "Dashboard HA Banking potřebuje karty",
-      "fix_flow": {
-        "step": {
-          "confirm": {
-            "title": "Nainstalovat karty",
-            "description": "Dashboardu HA Banking chybí tyto karty: {cards}. Home Assistant je nainstaluje z Marketu nebo z HACS, jinak z GitHubu. Potom obnovte stránku prohlížeče."
-          }
-        },
-        "abort": {
-          "install_failed": "Instalace selhala: {error}"
-        }
-      }
+      "description": "Nainstalujte {cards} z HACS nebo z Marketu Home Assistantu a potom obnovte stránku. Tato integrace karty neinstaluje."
+    },
+    "dashboard_missing": {
+      "title": "Vytvořte dashboard HA Banking",
+      "description": "Chybí dashboard s URL cestou ha-banking. Vytvořte ho v Nastavení, Nástěnky, nebo přidejte příklad z README integrace. Integrace doplní obsah do úložného dashboardu s touto cestou a sama ho nevytváří."
     }
   }
 }

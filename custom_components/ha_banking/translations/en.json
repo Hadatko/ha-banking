@@ -222,13 +222,11 @@
       "init": {
         "data": {
           "large_payment": "Minimum payment amount",
-          "low_balance": "Low available balance",
-          "install_cards": "Install dashboard cards"
+          "low_balance": "Low available balance"
         },
         "data_description": {
           "large_payment": "Announce a payment only when its amount is at least this number. Leave it empty to announce every new payment.",
-          "low_balance": "Announce once when the available balance falls below this number. It can announce again after the balance rises above it. Leave it empty to turn this off.",
-          "install_cards": "Install button-card, stack-in-card and mini-graph-card for the HA Banking dashboard when they are missing. They come from the Home Assistant Marketplace or HACS, otherwise from their GitHub release."
+          "low_balance": "Announce once when the available balance falls below this number. It can announce again after the balance rises above it. Leave it empty to turn this off."
         },
         "description": "These alerts are optional. The payment event is still fired for every new payment.",
         "title": "Alerts"
@@ -246,17 +244,11 @@
   "issues": {
     "dashboard_missing_cards": {
       "title": "The HA Banking dashboard needs cards",
-      "fix_flow": {
-        "step": {
-          "confirm": {
-            "title": "Install cards",
-            "description": "The HA Banking dashboard is missing these cards: {cards}. Home Assistant installs them from the Marketplace or HACS, otherwise from GitHub. Reload the browser page afterwards."
-          }
-        },
-        "abort": {
-          "install_failed": "Installation failed: {error}"
-        }
-      }
+      "description": "Install {cards} from HACS or the Home Assistant Marketplace, then reload the page. This integration does not install cards."
+    },
+    "dashboard_missing": {
+      "title": "Create the HA Banking dashboard",
+      "description": "There is no dashboard with the URL path ha-banking. Create one under Settings, Dashboards, or add the example from the integration README. This integration fills a storage dashboard at that path and does not create one itself."
     }
   }
 }

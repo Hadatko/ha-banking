@@ -1,28 +1,22 @@
-"""Installing the dashboard cards (Marketplace / HACS commands, GitHub fallback, repair flow)."""
+"""The dashboard lists missing cards and does not install them or create a dashboard."""
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
-import pytest
-from homeassistant.components import websocket_api
 from homeassistant.components.lovelace.const import LOVELACE_DATA
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.setup import async_setup_component
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
+import pytest
 
-from custom_components.ha_banking import cards, dashboard, repairs
-from custom_components.ha_banking.const import CONF_INSTALL_CARDS, DOMAIN
+from custom_components.ha_banking import cards, dashboard
+from custom_components.ha_banking.const import DOMAIN
+
 
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
     """Load custom_components in these tests."""
-
-
-MODULE = b"class X extends HTMLElement{};customElements.define('x-card', X);"
 
 
 @pytest.fixture
@@ -34,174 +28,55 @@ async def lovelace(hass: HomeAssistant) -> Any:
     return resources
 
 
-def _register_store(
-    hass: HomeAssistant,
-    store: str,
-    installed: list[str],
-    resources: Any,
-    install: str | None = None,
-    error: str | None = None,
-) -> None:
-    """Fake Marketplace/HACS websocket commands (list + install adding the resource).
-
-    The install command names are the real ones (Marketplace: repository/install, HACS:
-    repository/download); `install` overrides it, `error` makes the install fail.
-    """
-    install = install or cards.STORES[store]
-    repos = [
-        {"id": str(i), "full_name": card.repo, "installed": False}
-        for i, card in enumerate(cards.CARDS)
-    ]
-
-    @websocket_api.websocket_command({"type": f"{store}/repositories/list"})
-    @websocket_api.require_admin
-    @websocket_api.async_response
-    async def list_repos(hass: HomeAssistant, connection: Any, msg: dict) -> None:
-        connection.send_message(websocket_api.result_message(msg["id"], repos))
-
-    @websocket_api.websocket_command({"type": install, "repository": str})
-    @websocket_api.require_admin
-    @websocket_api.async_response
-    async def download(hass: HomeAssistant, connection: Any, msg: dict) -> None:
-        if error:
-            connection.send_error(msg["id"], "warning_not_accepted", error)
-            return
-        card = cards.CARDS[int(msg["repository"])]
-        installed.append(card.name)
-        await resources.async_create_item(
-            {"res_type": "module", "url": f"/{store}files/{card.name}/{card.asset}"}
-        )
-        connection.send_message(websocket_api.result_message(msg["id"], {}))
-
-    websocket_api.async_register_command(hass, list_repos)
-    websocket_api.async_register_command(hass, download)
-
-
-async def test_install_via_marketplace(hass: HomeAssistant, lovelace: Any) -> None:
-    installed: list[str] = []
-    _register_store(hass, "marketplace", installed, lovelace)
-    assert await cards.async_missing_cards(hass) == [c.name for c in cards.CARDS]
-    result = await cards.async_install_cards(hass, ["button-card", "mini-graph-card"])
-    assert result == {"button-card": "marketplace", "mini-graph-card": "marketplace"}
-    assert installed == ["button-card", "mini-graph-card"]
-    assert await cards.async_missing_cards(hass) == ["stack-in-card"]
-
-
-async def test_install_via_hacs_when_no_marketplace(hass: HomeAssistant, lovelace: Any) -> None:
-    installed: list[str] = []
-    _register_store(hass, "hacs", installed, lovelace)
-    result = await cards.async_install_cards(hass, ["stack-in-card"])
-    assert result == {"stack-in-card": "hacs"}
-
-
-def test_store_commands_are_the_real_ones() -> None:
-    assert cards.STORES == {
-        "marketplace": "marketplace/repository/install",
-        "hacs": "hacs/repository/download",
-    }
-
-
-async def test_store_without_install_command_is_not_a_success(
+async def test_missing_cards_follow_registered_resources(
     hass: HomeAssistant, lovelace: Any
 ) -> None:
-    """A store whose install command has another name must not report a fake success."""
-    installed: list[str] = []
-    _register_store(hass, "marketplace", installed, lovelace, install="marketplace/other")
-    _register_store(hass, "hacs", installed, lovelace)
-    result = await cards.async_install_cards(hass, ["stack-in-card"])
-    assert result == {"stack-in-card": "hacs"}
-    assert installed == ["stack-in-card"]
+    assert await cards.async_missing_cards(hass) == [card.name for card in cards.CARDS]
+    await lovelace.async_create_item(
+        {"res_type": "module", "url": "/hacsfiles/button-card/button-card.js"}
+    )
+    assert await cards.async_missing_cards(hass) == ["stack-in-card", "mini-graph-card"]
 
 
-async def test_store_refusing_install_falls_back(hass: HomeAssistant, lovelace: Any) -> None:
-    installed: list[str] = []
-    _register_store(hass, "marketplace", installed, lovelace, error="accept the warning first")
-    _register_store(hass, "hacs", installed, lovelace)
-    result = await cards.async_install_cards(hass, ["button-card"])
-    assert result == {"button-card": "hacs"}
-
-
-async def test_install_from_github(
-    hass: HomeAssistant, lovelace: Any, aioclient_mock: AiohttpClientMocker
+async def test_check_cards_opens_a_repair_without_installing(
+    hass: HomeAssistant, lovelace: Any
 ) -> None:
-    card = cards.CARDS[0]
-    asset_url = f"https://github.com/{card.repo}/releases/download/v7.0.1/{card.asset}"
-    aioclient_mock.get(
-        cards.GITHUB_API.format(repo=card.repo),
-        json={
-            "tag_name": "v7.0.1",
-            "assets": [{"name": card.asset, "browser_download_url": asset_url}],
-        },
-    )
-    aioclient_mock.get(asset_url, content=MODULE)
-    result = await cards.async_install_cards(hass, [card.name])
-    assert result == {card.name: "github"}
-    path = hass.config.path(*cards.LOCAL_DIR, card.asset)
-    content = await hass.async_add_executor_job(Path(path).read_bytes)
-    assert content == MODULE
-    urls = [item["url"] for item in lovelace.async_items()]
-    assert urls == [f"/local/ha_banking/cards/{card.asset}?v=v7.0.1"]
-    assert card.name not in await cards.async_missing_cards(hass)
-
-
-async def test_github_rejects_unexpected_content(
-    hass: HomeAssistant, lovelace: Any, aioclient_mock: AiohttpClientMocker
-) -> None:
-    card = cards.CARDS[1]
-    asset_url = f"https://example.invalid/{card.asset}"
-    aioclient_mock.get(
-        cards.GITHUB_API.format(repo=card.repo),
-        json={
-            "tag_name": "0.2.0",
-            "assets": [{"name": card.asset, "browser_download_url": asset_url}],
-        },
-    )
-    aioclient_mock.get(asset_url, content=b"<html>not a module</html>")
-    result = await cards.async_install_cards(hass, [card.name])
-    assert "unexpected content" in result[card.name]
-    assert list(lovelace.async_items()) == []
-
-
-async def test_repair_flow_installs_cards(hass: HomeAssistant, lovelace: Any) -> None:
-    installed: list[str] = []
-    _register_store(hass, "marketplace", installed, lovelace)
-    ir.async_create_issue(
-        hass,
-        DOMAIN,
-        dashboard.ISSUE_CARDS,
-        is_fixable=True,
-        severity=ir.IssueSeverity.WARNING,
-        translation_key=dashboard.ISSUE_CARDS,
-        translation_placeholders={"cards": "x"},
-    )
-    flow = await repairs.async_create_fix_flow(hass, dashboard.ISSUE_CARDS, None)
-    flow.hass = hass
-    flow.issue_id = dashboard.ISSUE_CARDS
-    flow.handler = DOMAIN
-    flow.flow_id = "1"
-    result = await flow.async_step_init()
-    assert result["step_id"] == "confirm"
-    assert "button-card" in result["description_placeholders"]["cards"]
-    result = await flow.async_step_confirm({})
-    assert result["type"] == "create_entry"
-    assert sorted(installed) == sorted(c.name for c in cards.CARDS)
-    assert ir.async_get(hass).async_get_issue(DOMAIN, dashboard.ISSUE_CARDS) is None
-
-
-async def test_check_cards_raises_issue_when_install_is_off(hass: HomeAssistant, lovelace: Any) -> None:
-    installed: list[str] = []
-    _register_store(hass, "marketplace", installed, lovelace)
-    MockConfigEntry(domain=DOMAIN, options={CONF_INSTALL_CARDS: False}).add_to_hass(hass)
     await dashboard.async_check_cards(hass)
-    assert installed == []
     issue = ir.async_get(hass).async_get_issue(DOMAIN, dashboard.ISSUE_CARDS)
-    assert issue is not None and issue.is_fixable
+    assert issue is not None
+    assert issue.is_fixable is False
+    assert "button-card" in issue.translation_placeholders["cards"]
+    assert "stack-in-card" in issue.translation_placeholders["cards"]
 
 
-async def test_check_cards_installs_by_default(hass: HomeAssistant, lovelace: Any) -> None:
-    installed: list[str] = []
-    _register_store(hass, "marketplace", installed, lovelace)
-    MockConfigEntry(domain=DOMAIN, options={}).add_to_hass(hass)
-    await dashboard.async_check_cards(hass)
-    assert sorted(installed) == sorted(c.name for c in cards.CARDS)
-    assert ir.async_get(hass).async_get_issue(DOMAIN, dashboard.ISSUE_CARDS) is None
+async def test_dashboard_is_not_created_from_lovelace_internals(
+    hass: HomeAssistant, lovelace: Any
+) -> None:
+    called: list[object] = []
+
+    def handler(*args: object) -> None:
+        called.append(args)
+
+    hass.data["websocket_api"] = {"lovelace/dashboards/create": (handler, None)}
+    await dashboard.async_setup_dashboard(hass)
+    assert called == []
+    assert dashboard.DASHBOARD_PATH not in hass.data[LOVELACE_DATA].dashboards
+    issue = ir.async_get(hass).async_get_issue(DOMAIN, dashboard.ISSUE_DASHBOARD)
+    assert issue is not None
+    assert issue.is_fixable is False
+
+
+async def test_existing_dashboard_is_filled(hass: HomeAssistant, lovelace: Any) -> None:
+    class Store:
+        def __init__(self) -> None:
+            self.config: dict | None = None
+
+        async def async_save(self, config: dict) -> None:
+            self.config = config
+
+    store = Store()
+    hass.data[LOVELACE_DATA].dashboards[dashboard.DASHBOARD_PATH] = store
+    await dashboard.async_setup_dashboard(hass)
+    assert store.config is not None
+    assert store.config["views"][0]["cards"][0]["content"]
+    assert ir.async_get(hass).async_get_issue(DOMAIN, dashboard.ISSUE_DASHBOARD) is None

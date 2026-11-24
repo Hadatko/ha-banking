@@ -49,6 +49,32 @@ async def test_production_login_uses_internet_banking() -> None:
 
 
 @pytest.mark.asyncio
+async def test_client_certificate_is_loaded_once_off_the_loop(monkeypatch) -> None:
+    """The SSL context is built in an executor and reused for later token calls."""
+    calls: list[str] = []
+
+    def create_default_context():
+        calls.append("create")
+        return SimpleNamespace(load_cert_chain=lambda *_args: calls.append("load"))
+
+    async def executor(func):
+        calls.append("executor")
+        return func()
+
+    monkeypatch.setattr(
+        "custom_components.ha_banking.oauth.ssl.create_default_context",
+        create_default_context,
+    )
+    hass = _hass()
+    hass.async_add_executor_job = executor
+    implementation = _implementation(hass)
+    first = await implementation._client_ssl()
+    second = await implementation._client_ssl()
+    assert first is second
+    assert calls == ["executor", "create", "load"]
+
+
+@pytest.mark.asyncio
 async def test_sandbox_login_uses_documented_redirect_parameter() -> None:
     url = await _implementation(_hass(), sandbox=True).async_generate_authorize_url("flow-1")
     assert url.startswith("http://developers.airbank.cz/sandbox/login?")

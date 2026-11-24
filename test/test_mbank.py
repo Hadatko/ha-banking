@@ -212,8 +212,8 @@ def test_folder_with_spaces_is_quoted(monkeypatch) -> None:
     selected = []
 
     class Client:
-        def __init__(self, host, port):
-            pass
+        def __init__(self, host, port, *, ssl_context=None):
+            assert ssl_context is not None
 
         def login(self, username, password):
             return "OK", [b""]

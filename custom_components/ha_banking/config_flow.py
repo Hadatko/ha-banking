@@ -26,7 +26,6 @@ from .const import (
     CONF_BANK_FOLDERS,
     CONF_IMAP_HOST,
     CONF_ACCOUNT_NAMES,
-    CONF_INSTALL_CARDS,
     CONF_LARGE_PAYMENT,
     CONF_LOW_BALANCE,
     CONF_MARK_SEEN,
@@ -650,7 +649,6 @@ def _alert_schema(current: Mapping[str, Any]) -> vol.Schema:
     for key in (CONF_LARGE_PAYMENT, CONF_LOW_BALANCE):
         marker = vol.Optional(key, default=current[key]) if current.get(key) not in (None, "") else vol.Optional(key)
         fields[marker] = number
-    fields[vol.Optional(CONF_INSTALL_CARDS, default=current.get(CONF_INSTALL_CARDS, True))] = bool
     return vol.Schema(fields)
 
 
@@ -665,7 +663,6 @@ class AlertOptionsFlow(OptionsFlow):
                 for key in (CONF_LARGE_PAYMENT, CONF_LOW_BALANCE)
                 if user_input.get(key) not in (None, "")
             }
-            stored[CONF_INSTALL_CARDS] = bool(user_input.get(CONF_INSTALL_CARDS, True))
             return self.async_create_entry(data=stored)
         return self.async_show_form(step_id="init", data_schema=_alert_schema(self.config_entry.options))
 
