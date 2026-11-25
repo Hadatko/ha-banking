@@ -9,7 +9,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 import jwt
 import pytest
 
-from custom_components.ha_banking.lib.enable_banking import (
+from custom_components.ha_bank_watch.lib.enable_banking import (
     EnableBanking,
     EnableBankingSessionExpired,
     account_record,
@@ -21,8 +21,8 @@ from custom_components.ha_banking.lib.enable_banking import (
     finish_authorization,
     private_key_ready,
 )
-from custom_components.ha_banking.lib.http import HttpResponse
-from custom_components.ha_banking.snapshot import build_enable_banking_snapshot
+from custom_components.ha_bank_watch.lib.http import HttpResponse
+from custom_components.ha_bank_watch.snapshot import build_enable_banking_snapshot
 
 
 def _private_key(tmp_path: Path) -> Path:

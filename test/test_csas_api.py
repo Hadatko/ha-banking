@@ -3,8 +3,8 @@
 from datetime import date
 from urllib.parse import parse_qs, urlparse
 
-from custom_components.ha_banking.const import AuthMethod
-from custom_components.ha_banking.csas import (
+from custom_components.ha_bank_watch.const import AuthMethod
+from custom_components.ha_bank_watch.csas import (
     CeskaSporitelna,
     CeskaSporitelnaError,
     authorization_url,
@@ -12,7 +12,7 @@ from custom_components.ha_banking.csas import (
     collect_csas_snapshots,
     sign_in_menu,
 )
-from custom_components.ha_banking.lib.http import HttpResponse
+from custom_components.ha_bank_watch.lib.http import HttpResponse
 
 
 class FakeTransport:

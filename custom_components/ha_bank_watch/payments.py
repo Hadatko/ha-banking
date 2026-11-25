@@ -7,7 +7,7 @@ from hashlib import sha256
 from .const import DOMAIN, Direction
 from .snapshot import AccountSnapshot, PaymentRecord
 
-EVENT_PAYMENT = "ha_banking_payment"
+EVENT_PAYMENT = "ha_bank_watch_payment"
 
 _COPY = {
     "en": {
@@ -149,7 +149,7 @@ def publish_new_payments(hass, snapshots: list[AccountSnapshot], minimum_amount:
                 hass,
                 message,
                 title,
-                f"ha_banking_{sha256(payment.payment_id.encode()).hexdigest()[:16]}",
+                f"ha_bank_watch_{sha256(payment.payment_id.encode()).hexdigest()[:16]}",
             )
 
 
@@ -160,7 +160,7 @@ def publish_low_balance(hass, snapshots: list[AccountSnapshot], limit: float | N
     language = getattr(hass.config, "language", None) or "en"
     for snapshot in take_low_balances(low_balance_alerted(hass), snapshots, limit):
         title, message = low_balance_notification(language, snapshot.name, snapshot.available_balance, snapshot.currency)
-        async_create(hass, message, title, f"ha_banking_low_{sha256(snapshot.account_id.encode()).hexdigest()[:16]}")
+        async_create(hass, message, title, f"ha_bank_watch_low_{sha256(snapshot.account_id.encode()).hexdigest()[:16]}")
 
 
 def payment_notification(language: str, account_name: str, payment: PaymentRecord) -> tuple[str, str]:

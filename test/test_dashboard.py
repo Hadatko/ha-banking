@@ -1,6 +1,6 @@
 import json
 
-from custom_components.ha_banking.dashboard import (
+from custom_components.ha_bank_watch.dashboard import (
     DETAILS,
     HEAD,
     TEMPLATES,

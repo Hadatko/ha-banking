@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from custom_components.ha_banking.config_flow import certificate_files_ready
-from custom_components.ha_banking.sensor import SENSORS
-from custom_components.ha_banking.snapshot import build_account_snapshot
+from custom_components.ha_bank_watch.config_flow import certificate_files_ready
+from custom_components.ha_bank_watch.sensor import SENSORS
+from custom_components.ha_bank_watch.snapshot import build_account_snapshot
 
 
 def test_sensors_match_read_only_account_values():

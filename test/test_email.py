@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from datetime import date, datetime
 from email.message import EmailMessage
 
-from custom_components.ha_banking.mail import (
+from custom_components.ha_bank_watch.mail import (
     MailboxFolderNotFound,
     MailMessage,
     fetch_air_bank_messages,
@@ -15,8 +15,8 @@ from custom_components.ha_banking.mail import (
     snapshots_from_messages,
     text_from_rfc822,
 )
-from custom_components.ha_banking.const import Direction
-from custom_components.ha_banking.notices import (
+from custom_components.ha_bank_watch.const import Direction
+from custom_components.ha_bank_watch.notices import (
     CeskaSporitelnaNoticeParser,
     ParsedNotice,
     apply_account_names,

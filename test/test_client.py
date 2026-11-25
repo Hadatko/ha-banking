@@ -3,7 +3,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-from custom_components.ha_banking.lib import (
+from custom_components.ha_bank_watch.lib import (
     AirBank,
     AirBankApiError,
     ClientConfig,

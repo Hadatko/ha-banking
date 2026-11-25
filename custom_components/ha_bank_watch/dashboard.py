@@ -28,8 +28,8 @@ from .const import (
 OVERVIEW_PATH = "overview"
 ISSUE_CARDS = "dashboard_missing_cards"
 SERVICE_GET_DASHBOARD = "get_dashboard"
-HEAD = "ha_banking_head"
-DETAILS = "ha_banking_details"
+HEAD = "ha_bank_watch_head"
+DETAILS = "ha_bank_watch_details"
 PAYMENT_ROWS = 15
 INCOMING_COLOR = "#43a047"
 OUTGOING_COLOR = "#8e8e93"

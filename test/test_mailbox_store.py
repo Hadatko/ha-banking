@@ -5,7 +5,7 @@ from datetime import datetime
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.ha_banking.const import (
+from custom_components.ha_bank_watch.const import (
     CONF_AUTH_METHOD,
     CONF_IMAP_HOST,
     CONF_IMAP_PASSWORD,
@@ -14,15 +14,15 @@ from custom_components.ha_banking.const import (
     AuthMethod,
     Direction,
 )
-from custom_components.ha_banking.coordinator import AirBankCoordinator
-from custom_components.ha_banking.mail import FolderState, MailboxCache
-from custom_components.ha_banking.mailbox_store import (
+from custom_components.ha_bank_watch.coordinator import AirBankCoordinator
+from custom_components.ha_bank_watch.mail import FolderState, MailboxCache
+from custom_components.ha_bank_watch.mailbox_store import (
     cache_from_dict,
     cache_to_dict,
     mailbox_key,
     parser_fingerprint,
 )
-from custom_components.ha_banking.notices import ParsedNotice
+from custom_components.ha_bank_watch.notices import ParsedNotice
 
 KEY = mailbox_key("imap.gmail.com", "User@Example.com")
 

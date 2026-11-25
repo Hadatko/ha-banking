@@ -3,10 +3,10 @@
 from datetime import date
 import json
 
-from custom_components.ha_banking.const import AuthMethod
-from custom_components.ha_banking.csas import bank_api_menu
-from custom_components.ha_banking.fio import Fio, FioError, collect_fio_snapshots, fio_unique_id, read_start
-from custom_components.ha_banking.lib.http import HttpResponse
+from custom_components.ha_bank_watch.const import AuthMethod
+from custom_components.ha_bank_watch.csas import bank_api_menu
+from custom_components.ha_bank_watch.fio import Fio, FioError, collect_fio_snapshots, fio_unique_id, read_start
+from custom_components.ha_bank_watch.lib.http import HttpResponse
 
 
 class FakeTransport:

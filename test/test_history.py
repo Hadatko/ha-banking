@@ -3,10 +3,10 @@
 from contextlib import contextmanager
 from datetime import date, datetime
 
-from custom_components.ha_banking.const import Direction
-from custom_components.ha_banking.mail import MailboxCache, MailboxFolderNotFound, fetch_notices
-from custom_components.ha_banking.notices import MBankNoticeParser, snapshots_from_notices
-from custom_components.ha_banking.snapshot import mail_history_start, month_keys, monthly_totals
+from custom_components.ha_bank_watch.const import Direction
+from custom_components.ha_bank_watch.mail import MailboxCache, MailboxFolderNotFound, fetch_notices
+from custom_components.ha_bank_watch.notices import MBankNoticeParser, snapshots_from_notices
+from custom_components.ha_bank_watch.snapshot import mail_history_start, month_keys, monthly_totals
 
 from test_mbank import _raw_mail
 

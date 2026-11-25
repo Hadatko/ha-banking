@@ -3,7 +3,7 @@
 from datetime import timedelta
 from enum import StrEnum
 
-DOMAIN = "ha_banking"
+DOMAIN = "ha_bank_watch"
 CONF_CLIENT_ID = "client_id"
 CONF_CLIENT_SECRET = "client_secret"
 CONF_WEB_API_KEY = "web_api_key"

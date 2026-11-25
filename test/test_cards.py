@@ -10,8 +10,8 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.setup import async_setup_component
 import pytest
 
-from custom_components.ha_banking import cards, dashboard
-from custom_components.ha_banking.const import DOMAIN
+from custom_components.ha_bank_watch import cards, dashboard
+from custom_components.ha_bank_watch.const import DOMAIN
 
 
 @pytest.fixture(autouse=True)

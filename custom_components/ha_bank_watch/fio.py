@@ -22,7 +22,7 @@ FIO_API = "https://fioapi.fio.cz/v1/rest"
 INSTITUTION = "Fio banka"
 CONFIGURATION_URL = "https://ib.fio.cz/"
 PRAGUE = ZoneInfo("Europe/Prague")
-USER_AGENT = "HomeAssistant ha_banking"
+USER_AGENT = "HomeAssistant ha_bank_watch"
 
 
 class FioError(Exception):

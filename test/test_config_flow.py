@@ -4,9 +4,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from custom_components.ha_banking.config_flow import EMAIL_SCHEMA
-from custom_components.ha_banking.const import CONF_MARK_SEEN
-from custom_components.ha_banking.oauth import (
+from custom_components.ha_bank_watch.config_flow import EMAIL_SCHEMA
+from custom_components.ha_bank_watch.const import CONF_MARK_SEEN
+from custom_components.ha_bank_watch.oauth import (
     AirBankOAuth2Implementation,
     home_assistant_redirect_uri,
 )
@@ -62,7 +62,7 @@ async def test_client_certificate_is_loaded_once_off_the_loop(monkeypatch) -> No
         return func()
 
     monkeypatch.setattr(
-        "custom_components.ha_banking.oauth.ssl.create_default_context",
+        "custom_components.ha_bank_watch.oauth.ssl.create_default_context",
         create_default_context,
     )
     hass = _hass()

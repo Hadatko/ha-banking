@@ -7,10 +7,10 @@ from email.message import EmailMessage
 
 import pytest
 
-from custom_components.ha_banking import mail
-from custom_components.ha_banking.mail import MailboxFolderNotFound, fetch_air_bank_messages, snapshots_from_messages, text_from_rfc822
-from custom_components.ha_banking.mbank import movements_from_html, parse_row
-from custom_components.ha_banking.notices import (
+from custom_components.ha_bank_watch import mail
+from custom_components.ha_bank_watch.mail import MailboxFolderNotFound, fetch_air_bank_messages, snapshots_from_messages, text_from_rfc822
+from custom_components.ha_bank_watch.mbank import movements_from_html, parse_row
+from custom_components.ha_bank_watch.notices import (
     BANK_PARSERS,
     MBankNoticeParser,
     imap_sender_criteria,

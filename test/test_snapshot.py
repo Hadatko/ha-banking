@@ -1,11 +1,11 @@
 from datetime import date
 
-from custom_components.ha_banking.snapshot import (
+from custom_components.ha_bank_watch.snapshot import (
     bank_logo_url,
     build_account_snapshot,
     collect_account_snapshots,
 )
-from custom_components.ha_banking.lib import AirBank, ClientConfig
+from custom_components.ha_bank_watch.lib import AirBank, ClientConfig
 
 
 def _account():

@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 
-from custom_components.ha_banking.mail import MailMessage, snapshots_from_messages
-from custom_components.ha_banking.payments import (
+from custom_components.ha_bank_watch.mail import MailMessage, snapshots_from_messages
+from custom_components.ha_bank_watch.payments import (
     announces_payment,
     low_balance_notification,
     payment_notification,
@@ -10,7 +10,7 @@ from custom_components.ha_banking.payments import (
     take_low_balances,
     take_new_payments,
 )
-from custom_components.ha_banking.snapshot import PAYMENT_LIST_LIMIT
+from custom_components.ha_bank_watch.snapshot import PAYMENT_LIST_LIMIT
 
 
 def _message(amount: int, sent_at: datetime) -> MailMessage:

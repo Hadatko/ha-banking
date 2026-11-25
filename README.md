@@ -68,7 +68,7 @@ A Gmail filter can apply a label when the message arrives. For Air Bank, use Fro
 
 Home Assistant reads the mailbox as soon as the integration is added, and again every 15 minutes. Reloading the integration starts another read immediately. There is no separate button that checks the mailbox sooner.
 
-The first read covers the registered bank senders in that folder for the last 13 months, and always back to 1 January. Each later read asks the folder only for mail with a newer IMAP UID, so a quarter-hour read downloads only what arrived since. The parsed notices and the IMAP position of each folder are also kept in `/config/.storage/ha_banking.<entry id>.mailbox`, readable only by Home Assistant. After a restart the sensors start from that file at once and the mailbox is checked for newer mail in the background. The file is only a cache: when it is missing, belongs to another mailbox, was written by other parser code, or the folder's UIDVALIDITY changed, the whole window is read again. Raw mail is never stored. Removing the integration deletes the file. A notice that is labelled late gets a new UID and still joins the month or year of its date; a notice is not added twice. A notice that arrives just after a read waits for the next one, at most 15 minutes.
+The first read covers the registered bank senders in that folder for the last 13 months, and always back to 1 January. Each later read asks the folder only for mail with a newer IMAP UID, so a quarter-hour read downloads only what arrived since. The parsed notices and the IMAP position of each folder are also kept in `/config/.storage/ha_bank_watch.<entry id>.mailbox`, readable only by Home Assistant. After a restart the sensors start from that file at once and the mailbox is checked for newer mail in the background. The file is only a cache: when it is missing, belongs to another mailbox, was written by other parser code, or the folder's UIDVALIDITY changed, the whole window is read again. Raw mail is never stored. Removing the integration deletes the file. A notice that is labelled late gets a new UID and still joins the month or year of its date; a notice is not added twice. A notice that arrives just after a read waits for the next one, at most 15 minutes.
 
 The recent payments sensor has a `months` attribute: incoming, outgoing, net and count for each of the last 13 months, and the balance at the end of the month where the bank reports one.
 
@@ -97,7 +97,7 @@ Untested on the live service. Enable Banking does not provide this service to a 
 4. In Home Assistant, choose Enable Banking and enter the application ID, the private key path, whether the account is personal or business, and the two-letter country of the bank.
 5. Choose the bank from the list Enable Banking returns for that country. One application can be added again for another bank.
 
-The private key must be readable by Home Assistant, for example `/config/ha_banking/enablebanking.pem`. Keep that file secret. Do not commit it or share it.
+The private key must be readable by Home Assistant, for example `/config/ha_bank_watch/enablebanking.pem`. Keep that file secret. Do not commit it or share it.
 
 ![Enable Banking form for a new application, with Production selected](docs/enable-banking-new-application.jpg)
 
@@ -123,7 +123,13 @@ Press **Register** and store the downloaded private key on the Home Assistant ho
 Untested on the live API. Using it requires an account-information licence and a PSD2 client certificate bought from a trust service provider. That certificate was not purchased, so Home Assistant never signed in to Air Bank.
 
 - An Air Bank Open API application with the AISP scope
-- A PSD2 client certificate and private key stored on the Home Assistant host, for example `/config/ha_banking/client.pem` and `/config/ha_banking/client.key`
+- A PSD2 client certificate and private key stored on the Home Assistant host, for example `/config/ha_bank_watch/client.pem` and `/config/ha_bank_watch/client.key`
+
+## Version 1.6.0
+
+The integration domain is `ha_bank_watch` and the folder is `custom_components/ha_bank_watch`. The name shown in Home Assistant stays HA Banking. Release 1.5.0 and earlier used the domain `ha_banking`. That domain is already used by another integration in the HACS catalog, so the two cannot share a folder.
+
+If you already added this integration, remove that config entry and add it again. Devices, entity ids, and automations do not move with the domain. Listen for `ha_bank_watch_payment` instead of `ha_banking_payment`. The dashboard action id is `ha_bank_watch.get_dashboard`. The mailbox cache is `/config/.storage/ha_bank_watch.<entry id>.mailbox`. Certificate and key files can stay where they are. Enter the same paths when you set the integration up again.
 
 ## Install
 
@@ -150,7 +156,7 @@ Each account becomes one device with these sensors. Every sensor shows that bank
 
 HA Banking does not create a dashboard and does not change one you already have.
 
-The views are built from your accounts. In **Developer tools → Actions**, run **HA Banking: Get dashboard**. The response is YAML for the current accounts. Create a dashboard and paste that YAML into its raw configuration editor. When you add an account, run the action again and paste the new YAML yourself.
+The views are built from your accounts. In **Developer tools → Actions**, run **HA Banking: Get dashboard** (`ha_bank_watch.get_dashboard`). The response is YAML for the current accounts. Create a dashboard and paste that YAML into its raw configuration editor. When you add an account, run the action again and paste the new YAML yourself.
 
 The first tab, Overview, adds up every account: the total available balance (accounts in another currency are listed beside it), this month and this year, the payments of all accounts by date, and the monthly charts. The sums and charts use the currency most accounts have. Then there is one tab per account: balance with a 30-day sparkline, this month and this year (net, incoming, outgoing), recent payments, the balance at each month end, and incoming and outgoing by month for the last 13 months. Tap a row to open its sensor. The monthly charts come from the `months` attribute of the recent payments sensor, so they show the history at once.
 
@@ -199,11 +205,11 @@ views:
 
 The first read after Home Assistant starts remembers the payments already in the mailbox or the bank history. It does not announce them. A later read, at most 15 minutes afterwards, announces only a payment that was not in that first set.
 
-The announcement is a Home Assistant notification, the item under the bell. It stays until you dismiss it. The same payment also fires the `ha_banking_payment` event, so an automation can send it somewhere else. The integration itself does not push to a phone.
+The announcement is a Home Assistant notification, the item under the bell. It stays until you dismiss it. The same payment also fires the `ha_bank_watch_payment` event, so an automation can send it somewhere else. The integration itself does not push to a phone.
 
 The title follows the Home Assistant language. English uses "New bank payment", Slovak "Nová platba", and Czech "Nová platba". The message is the account name, the direction, the amount, and the currency. When the notice names the other side, that name is added to the message and to the payment list. With English selected, the direction reads Incoming or Outgoing.
 
-Open the integration and choose Configure to set two optional limits. Minimum payment amount announces a payment only when it is at least that amount. Leave it empty to announce every new payment. The `ha_banking_payment` event is still fired for every new payment. Low available balance announces once when the balance falls below the amount, and again only after the balance has risen above it. A restart does not repeat an alert that is already true.
+Open the integration and choose Configure to set two optional limits. Minimum payment amount announces a payment only when it is at least that amount. Leave it empty to announce every new payment. The `ha_bank_watch_payment` event is still fired for every new payment. Low available balance announces once when the balance falls below the amount, and again only after the balance has risen above it. A restart does not repeat an alert that is already true.
 
 ![Alerts dialog, with the minimum payment amount and the low available balance.](docs/alerts.png)
 

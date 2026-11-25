@@ -80,7 +80,7 @@ class EnableBanking:
             "Authorization": f"Bearer {self._jwt()}",
             "Accept": "application/json",
             "Psu-Ip-Address": "127.0.0.1",
-            "Psu-User-Agent": "HomeAssistant ha_banking",
+            "Psu-User-Agent": "HomeAssistant ha_bank_watch",
         }
         body = None
         if json_body is not None:
